@@ -707,6 +707,7 @@ Rep instructs AI to stop working a lead.
 | Outbound Sent | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-outbound-webhook` |
 | Response Received | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-response-webhook` |
 | Appointment Outcome | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-webhook` |
+| **Appointment Created** | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-created` |
 
 ### Required GHL Headers
 
@@ -760,6 +761,39 @@ Content-Type: application/json
 | `responded` | `true` |
 | `time_to_response_minutes` | Calculated |
 
+### Webhook 4: Appointment Created (NEW)
+
+**Trigger:** GHL "Appointment Created" (any source)
+**RPC:** `upsert_appointment_from_webhook(payload JSONB)`
+
+**Table:** `appointments` (UPSERT with passive logic)
+
+**Purpose:** Captures manually-created appointments in GHL calendar that bypass n8n workflows.
+
+**UPSERT Logic:**
+- If appointment exists (from n8n) → **DO NOTHING** (respects authoritative source)
+- If appointment is new → **INSERT with `created_source = 'rep_manual'`**
+
+| Column | Source |
+|--------|--------|
+| `ghl_appointment_id` | GHL appointment ID |
+| `location_id` | GHL location ID |
+| `contact_id` | GHL contact ID |
+| `assigned_rep_id` | Assigned user ID |
+| `assigned_rep_name` | Assigned user name |
+| `appointment_time` | Start time |
+| `created_source` | `'rep_manual'` (for new appointments) |
+| `source_workflow` | `'ghl_calendar'` |
+
+**created_source Values:**
+| Value | Source | Counts As |
+|-------|--------|-----------|
+| `ai_automated` | Drive AI 7.0 workflow | AI |
+| `rep_instructed` | Reactivate Drive workflow | Human |
+| `rep_manual` | Direct GHL calendar booking | Human |
+
+**See:** `docs/APPOINTMENT_WEBHOOK_SETUP.md` for full setup instructions.
+
 ---
 
 ## 11. VERIFICATION QUERIES
@@ -786,8 +820,10 @@ SELECT
   
   -- Appointments by source
   (SELECT COUNT(*) FROM appointments WHERE created_source = 'ai_automated') as ai_booked_appointments,
-  (SELECT COUNT(*) FROM appointments WHERE created_source = 'rep_instructed') as rep_booked_appointments,
-  
+  (SELECT COUNT(*) FROM appointments WHERE created_source = 'rep_instructed') as rep_instructed_appointments,
+  (SELECT COUNT(*) FROM appointments WHERE created_source = 'rep_manual') as rep_manual_appointments,
+  (SELECT COUNT(*) FROM appointments WHERE created_source IN ('rep_instructed', 'rep_manual')) as human_booked_appointments,
+
   -- Leads
   (SELECT COUNT(*) FROM leads) as total_leads,
   (SELECT COUNT(*) FROM leads WHERE first_outbound_at IS NOT NULL) as leads_with_outbound,
