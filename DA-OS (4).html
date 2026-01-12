@@ -1,0 +1,3419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dealership Accelerator OS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --black: #0a0a0a;
+      --dark: #121218;
+      --dark-2: #1a1a22;
+      --gray-dark: #252530;
+      --gray-mid: #35354a;
+      --gray-light: #9999aa;
+      --gray-text: #b8b8c8;
+      --white: #ffffff;
+      --brand: #D3FB40;
+      --brand-dim: #a8c933;
+      --brand-glow: rgba(211, 251, 64, 0.15);
+      --brand-subtle: rgba(211, 251, 64, 0.08);
+      --blue: #3b82f6;
+      --green: #22c55e;
+      --green-glow: rgba(34, 197, 94, 0.3);
+      --orange: #f97316;
+      --purple: #a855f7;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --cyan: #00d4ff;
+    }
+
+    html { scroll-behavior: smooth; font-size: 14px; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--black);
+      color: var(--white);
+      min-height: 100vh;
+      line-height: 1.5;
+      font-size: 0.875rem;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Cpath fill='%23ffffff' fill-opacity='0.012' d='M95.36,23.12l-.26,72.32h-20.88s.23-63.83.23-63.83c.01-4.09-5.18-5.66-7.39-2.23L24.49,95.43H.36S54.82,10.91,54.82,10.91c12.14-18.83,40.62-10.26,40.54,12.21Z'/%3E%3Cpath fill='%23ffffff' fill-opacity='0.012' d='M65.45,70.04c.02-6.31-7.98-8.72-11.39-3.43l-18.58,28.83h29.88s.09-25.4.09-25.4Z'/%3E%3C/svg%3E");
+      background-size: 80px 80px;
+      background-repeat: repeat;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top Navigation Bar */
+    .top-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 52px;
+      background: var(--dark);
+      border-bottom: 1px solid var(--gray-dark);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 100;
+      gap: 20px;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo { width: 28px; height: 28px; }
+
+    .logo-text {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      display: flex;
+      gap: 4px;
+    }
+
+    .logo-text-main { color: var(--white); }
+    .logo-text-os { color: var(--brand); }
+
+    .search-container {
+      flex: 1;
+      max-width: 320px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 8px 12px 8px 32px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      color: var(--white);
+      font-size: 12px;
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--brand);
+    }
+
+    .search-input::placeholder { color: var(--gray-light); }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray-light);
+      font-size: 12px;
+    }
+
+    .search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      margin-top: 4px;
+      max-height: 320px;
+      overflow-y: auto;
+      display: none;
+      z-index: 1000;
+    }
+
+    .search-results.visible { display: block; }
+
+    .search-result-item {
+      padding: 10px 12px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--gray-dark);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--dark-2); }
+
+    .search-result-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .search-result-name { font-weight: 500; }
+    .search-result-meta { color: var(--gray-light); margin-left: auto; font-size: 11px; }
+
+    /* Date Range Picker */
+    .date-picker-container { position: relative; }
+
+    .date-picker-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      color: var(--white);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .date-picker-btn:hover { border-color: var(--gray-mid); }
+    .date-picker-icon { font-size: 12px; }
+
+    .date-picker-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      margin-top: 6px;
+      padding: 12px;
+      min-width: 240px;
+      display: none;
+      z-index: 1000;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .date-picker-dropdown.visible { display: block; }
+
+    .date-preset-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .date-preset-btn {
+      padding: 8px 10px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 5px;
+      color: var(--gray-text);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    .date-preset-btn:hover { background: var(--gray-dark); color: var(--white); }
+
+    .date-preset-btn.active {
+      background: var(--brand);
+      color: var(--black);
+      border-color: var(--brand);
+    }
+
+    .date-custom-section {
+      padding-top: 12px;
+      border-top: 1px solid var(--gray-dark);
+    }
+
+    .date-custom-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--gray-light);
+      margin-bottom: 6px;
+    }
+
+    .date-custom-inputs { display: flex; gap: 6px; }
+
+    .date-custom-input {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 5px;
+      color: var(--white);
+      font-size: 11px;
+      font-family: inherit;
+    }
+
+    .date-custom-input:focus { outline: none; border-color: var(--brand); }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .refresh-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 5px;
+      color: var(--gray-text);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .refresh-btn:hover { background: var(--gray-dark); color: var(--white); }
+
+    .refresh-btn.loading .refresh-icon { animation: spin 1s linear infinite; }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 16px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--green);
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Main Content */
+    .main-content {
+      padding: 68px 24px 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Loading Overlay */
+    .loading-overlay {
+      position: fixed;
+      top: 52px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 10, 10, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .loading-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--gray-dark);
+      border-top-color: var(--brand);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+
+    .loading-text { font-size: 12px; color: var(--gray-text); }
+
+    /* Error State */
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--red);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+    }
+
+    .error-message.visible { display: flex; }
+    .error-icon { font-size: 16px; }
+    .error-text { color: var(--red); flex: 1; }
+    .error-dismiss { background: none; border: none; color: var(--gray-light); cursor: pointer; font-size: 16px; }
+
+    /* Page Title */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .page-title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .page-subtitle {
+      font-size: 11px;
+      color: var(--gray-light);
+      margin-top: 2px;
+    }
+
+    /* Section Title */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    /* Back Button */
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 5px;
+      color: var(--gray-text);
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-bottom: 16px;
+    }
+
+    .back-btn:hover { background: var(--gray-dark); color: var(--white); }
+
+    /* North Star Card */
+    .north-star-card {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.02));
+      border: 2px solid var(--green);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .north-star-card.active { animation: compounding-pulse 3s ease-in-out infinite; }
+
+    .north-star-card.inactive {
+      border-color: var(--gray-mid);
+      background: linear-gradient(135deg, rgba(107, 114, 128, 0.1), rgba(107, 114, 128, 0.02));
+    }
+
+    @keyframes compounding-pulse {
+      0%, 100% { box-shadow: 0 0 16px rgba(34, 197, 94, 0.2); }
+      50% { box-shadow: 0 0 32px rgba(34, 197, 94, 0.4), 0 0 48px rgba(34, 197, 94, 0.2); }
+    }
+
+    .north-star-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .north-star-label { display: flex; align-items: center; gap: 6px; }
+
+    .north-star-label span {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    .info-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      color: var(--gray-light);
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+    }
+
+    .info-btn:hover { background: var(--gray-dark); color: var(--white); }
+
+    .north-star-content {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .north-star-value { display: flex; align-items: baseline; gap: 10px; }
+
+    .north-star-number {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .north-star-number.active { color: var(--green); }
+    .north-star-number.inactive { color: var(--gray-light); }
+
+    .north-star-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .north-star-status.active { background: rgba(34, 197, 94, 0.2); color: var(--green); }
+    .north-star-status.inactive { background: rgba(107, 114, 128, 0.2); color: var(--gray-light); }
+
+    .north-star-breakdown {
+      display: flex;
+      gap: 16px;
+      margin-left: auto;
+    }
+
+    .breakdown-item {
+      text-align: center;
+      padding: 10px 16px;
+      background: var(--dark);
+      border-radius: 6px;
+      border: 1px solid var(--gray-dark);
+    }
+
+    .breakdown-count { font-size: 20px; font-weight: 700; }
+    .breakdown-count.active { color: var(--green); }
+    .breakdown-count.inactive { color: var(--gray-light); }
+    .breakdown-label { font-size: 9px; color: var(--gray-text); margin-top: 2px; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      padding: 14px 16px;
+      transition: all 0.2s;
+    }
+
+    .stat-card:hover { border-color: var(--gray-mid); }
+
+    .stat-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-light);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 4px;
+      letter-spacing: -0.02em;
+    }
+
+    .stat-value.green { color: var(--green); }
+    .stat-value.orange { color: var(--orange); }
+    .stat-value.red { color: var(--red); }
+    .stat-value.yellow { color: var(--yellow); }
+
+    .stat-subtext { font-size: 10px; color: var(--gray-text); line-height: 1.3; }
+
+    /* Risk Grid - 4 cards per blueprint */
+    .risk-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .risk-card {
+      padding: 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      border: 2px solid transparent;
+    }
+
+    .risk-card:hover { transform: translateY(-2px); }
+    .risk-card.active { border-color: currentColor; }
+
+    .risk-card.critical { background: rgba(239, 68, 68, 0.1); color: var(--red); }
+    .risk-card.at-risk { background: rgba(249, 115, 22, 0.1); color: var(--orange); }
+    .risk-card.attention { background: rgba(234, 179, 8, 0.1); color: var(--yellow); }
+    .risk-card.healthy { background: rgba(34, 197, 94, 0.1); color: var(--green); }
+
+    .risk-icon { font-size: 18px; margin-bottom: 6px; }
+    .risk-count { font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 2px; }
+    .risk-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Account List */
+    .account-list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .sort-dropdown {
+      padding: 8px 12px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      color: var(--white);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .account-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .account-card {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .account-card:hover { border-color: var(--gray-mid); transform: translateX(3px); }
+
+    .account-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .account-name-row { display: flex; align-items: center; gap: 10px; }
+
+    .risk-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    .risk-dot.critical { background: var(--red); }
+    .risk-dot.at-risk { background: var(--orange); }
+    .risk-dot.attention { background: var(--yellow); }
+    .risk-dot.healthy { background: var(--green); }
+
+    .account-name { font-size: 13px; font-weight: 700; }
+
+    .account-meta { display: flex; align-items: center; gap: 12px; }
+
+    .health-badge {
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .health-badge.critical { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .health-badge.at-risk { background: rgba(249, 115, 22, 0.15); color: var(--orange); }
+    .health-badge.attention { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+    .health-badge.healthy { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+
+    .trend-indicator { font-size: 11px; font-weight: 500; }
+    .trend-indicator.up { color: var(--green); }
+    .trend-indicator.down { color: var(--red); }
+    .trend-indicator.stable { color: var(--gray-light); }
+
+    .account-metrics {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .metric-item { display: flex; align-items: center; gap: 6px; }
+    .metric-label { font-size: 10px; color: var(--gray-light); }
+    .metric-value { font-size: 11px; font-weight: 600; }
+    .metric-value.red { color: var(--red); }
+    .metric-value.orange { color: var(--orange); }
+    .metric-value.yellow { color: var(--yellow); }
+    .metric-value.green { color: var(--green); }
+
+    .compounding-mini {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 5px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .compounding-mini.active { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .compounding-mini.inactive { background: rgba(107, 114, 128, 0.15); color: var(--gray-light); }
+
+    .progress-bar-mini {
+      width: 50px;
+      height: 3px;
+      background: var(--gray-dark);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar-mini .fill {
+      height: 100%;
+      background: var(--gray-light);
+      border-radius: 2px;
+    }
+
+    .account-issue {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 12px;
+      background: var(--dark-2);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--gray-text);
+    }
+
+    .issue-icon { font-size: 12px; }
+
+    .account-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--gray-dark);
+    }
+
+    .footer-stats { display: flex; gap: 16px; }
+
+    .footer-stat {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      color: var(--gray-text);
+    }
+
+    .view-details-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      background: var(--brand-subtle);
+      border: 1px solid rgba(211, 251, 64, 0.2);
+      border-radius: 5px;
+      color: var(--brand);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .view-details-btn:hover { background: var(--brand); color: var(--black); }
+
+    /* Client Detail Page */
+    .page-content { display: none; }
+    .page-content.active { display: block; }
+
+    /* Client Header */
+    .client-header {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 16px;
+    }
+
+    .client-header-content {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .client-risk-indicator {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+
+    .client-risk-indicator.critical { background: rgba(239, 68, 68, 0.2); }
+    .client-risk-indicator.at-risk { background: rgba(249, 115, 22, 0.2); }
+    .client-risk-indicator.attention { background: rgba(234, 179, 8, 0.2); }
+    .client-risk-indicator.healthy { background: rgba(34, 197, 94, 0.2); }
+
+    .client-name {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+
+    .client-status { display: flex; align-items: center; gap: 12px; }
+
+    /* ============================================ */
+    /* ADOPTION SCORE HERO SECTION - NEW DESIGN    */
+    /* ============================================ */
+    .adoption-hero {
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .adoption-hero.critical {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.03));
+      border: 2px solid var(--red);
+    }
+
+    .adoption-hero.at-risk {
+      background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.03));
+      border: 2px solid var(--orange);
+    }
+
+    .adoption-hero.attention {
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.12), rgba(234, 179, 8, 0.03));
+      border: 2px solid var(--yellow);
+    }
+
+    .adoption-hero.healthy {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.03));
+      border: 2px solid var(--green);
+      animation: adoption-pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes adoption-pulse {
+      0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.15); }
+      50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.25), 0 0 60px rgba(34, 197, 94, 0.1); }
+    }
+
+    .adoption-hero-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .adoption-hero-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .adoption-hero-title span:first-child {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--brand);
+      font-weight: 700;
+    }
+
+    .adoption-hero-title span:last-child {
+      font-size: 9px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .adoption-status-badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .adoption-status-badge.critical { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+    .adoption-status-badge.at-risk { background: rgba(249, 115, 22, 0.2); color: var(--orange); }
+    .adoption-status-badge.attention { background: rgba(234, 179, 8, 0.2); color: var(--yellow); }
+    .adoption-status-badge.healthy { background: rgba(34, 197, 94, 0.2); color: var(--green); }
+
+    .adoption-hero-main {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      margin-bottom: 24px;
+    }
+
+    .adoption-score-display {
+      text-align: center;
+      min-width: 140px;
+    }
+
+    .adoption-score-large {
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .adoption-score-large.critical { color: var(--red); }
+    .adoption-score-large.at-risk { color: var(--orange); }
+    .adoption-score-large.attention { color: var(--yellow); }
+    .adoption-score-large.healthy { color: var(--green); }
+
+    .adoption-score-max {
+      font-size: 14px;
+      color: var(--gray-light);
+      margin-top: 4px;
+    }
+
+    .adoption-summary-box {
+      flex: 1;
+      padding: 16px 20px;
+      background: rgba(0, 0, 0, 0.25);
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .adoption-summary-title {
+      font-size: 12px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .adoption-summary-text {
+      font-size: 13px;
+      color: var(--gray-text);
+      line-height: 1.6;
+    }
+
+    .adoption-summary-text strong {
+      color: var(--white);
+    }
+
+    /* Component Cards Grid */
+    .adoption-components-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .adoption-component-card {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 12px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .adoption-component-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .adoption-component-card.critical::before { background: var(--red); }
+    .adoption-component-card.at-risk::before { background: var(--orange); }
+    .adoption-component-card.attention::before { background: var(--yellow); }
+    .adoption-component-card.healthy::before { background: var(--green); }
+
+    .component-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .component-card-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-light);
+      font-weight: 600;
+    }
+
+    .component-card-weight {
+      font-size: 9px;
+      padding: 2px 6px;
+      background: var(--dark-2);
+      border-radius: 3px;
+      color: var(--gray-light);
+    }
+
+    .component-score-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .component-score-value {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .component-score-value.critical { color: var(--red); }
+    .component-score-value.at-risk { color: var(--orange); }
+    .component-score-value.attention { color: var(--yellow); }
+    .component-score-value.healthy { color: var(--green); }
+
+    .component-score-indicator {
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .component-progress-bar {
+      height: 6px;
+      background: var(--gray-dark);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .component-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.4s ease;
+    }
+
+    .component-progress-fill.critical { background: linear-gradient(90deg, var(--red), #f87171); }
+    .component-progress-fill.at-risk { background: linear-gradient(90deg, var(--orange), #fb923c); }
+    .component-progress-fill.attention { background: linear-gradient(90deg, var(--yellow), #facc15); }
+    .component-progress-fill.healthy { background: linear-gradient(90deg, var(--green), #4ade80); }
+
+    .component-factors {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .component-factor {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .factor-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      flex-shrink: 0;
+    }
+
+    .factor-icon.good { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .factor-icon.bad { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .factor-icon.warn { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+    .factor-icon.neutral { background: var(--dark-2); color: var(--gray-light); }
+
+    .factor-text { color: var(--gray-text); flex: 1; }
+    .factor-value { font-weight: 600; color: var(--white); }
+
+    .component-impact {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--gray-dark);
+      font-size: 10px;
+      color: var(--gray-light);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .impact-value {
+      font-weight: 700;
+    }
+
+    .impact-value.red { color: var(--red); }
+    .impact-value.green { color: var(--green); }
+
+    /* Section Cards */
+    .section-card {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .section-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--gray-dark);
+      background: var(--dark-2);
+    }
+
+    .section-card-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-card-body { padding: 16px; }
+
+    /* Compounding Rate Card - Simplified */
+    .compounding-card {
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .compounding-card.active {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.02));
+      border: 2px solid var(--green);
+      animation: compounding-pulse 3s ease-in-out infinite;
+    }
+
+    .compounding-card.inactive {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(107, 114, 128, 0.02));
+      border: 2px solid var(--gray-mid);
+    }
+
+    .compounding-card.inactive.low {
+      border-color: var(--red);
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.02));
+    }
+
+    .compounding-card.inactive.close {
+      border-color: var(--yellow);
+      background: linear-gradient(135deg, rgba(234, 179, 8, 0.1), rgba(234, 179, 8, 0.02));
+    }
+
+    .compounding-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .compounding-main {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .compounding-rate-display { text-align: center; }
+
+    .compounding-rate-value {
+      font-size: 56px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .compounding-rate-value.active { color: var(--green); }
+    .compounding-rate-value.inactive { color: var(--gray-light); }
+    .compounding-rate-value.low { color: var(--red); }
+    .compounding-rate-value.close { color: var(--yellow); }
+
+    .compounding-status-box {
+      flex: 1;
+      padding: 14px 18px;
+      border-radius: 8px;
+    }
+
+    .compounding-status-box.active { background: rgba(34, 197, 94, 0.15); }
+    .compounding-status-box.inactive { background: rgba(107, 114, 128, 0.15); }
+    .compounding-status-box.low { background: rgba(239, 68, 68, 0.1); }
+    .compounding-status-box.close { background: rgba(234, 179, 8, 0.1); }
+
+    .compounding-status-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .compounding-status-title.active { color: var(--green); }
+    .compounding-status-title.inactive { color: var(--gray-light); }
+    .compounding-status-title.low { color: var(--red); }
+    .compounding-status-title.close { color: var(--yellow); }
+
+    .compounding-status-desc {
+      font-size: 12px;
+      color: var(--gray-text);
+      line-height: 1.5;
+    }
+
+    .compounding-threshold {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      padding: 12px 14px;
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+    }
+
+    .threshold-badge {
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .threshold-badge.low { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .threshold-badge.close { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+    .threshold-badge.good { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .threshold-badge.excellent { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+
+    .threshold-goal {
+      font-size: 11px;
+      color: var(--gray-text);
+      margin-left: auto;
+    }
+
+    .threshold-goal strong { color: var(--brand); }
+
+    /* Progress bar for inactive */
+    .compounding-progress { margin-top: 14px; }
+
+    .compounding-progress-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 10px;
+      color: var(--gray-light);
+    }
+
+    .compounding-progress-bar {
+      height: 6px;
+      background: var(--gray-dark);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .compounding-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+
+    .compounding-progress-fill.low { background: linear-gradient(90deg, var(--red), var(--orange)); }
+    .compounding-progress-fill.close { background: linear-gradient(90deg, var(--yellow), var(--brand)); }
+    .compounding-progress-fill.default { background: linear-gradient(90deg, var(--gray-light), var(--gray-text)); }
+
+    /* Current Issues Box */
+    .issues-box {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    .issues-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+    }
+
+    .issue-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px;
+      background: var(--dark-2);
+      border-radius: 6px;
+      margin-bottom: 8px;
+      font-size: 11px;
+    }
+
+    .issue-item:last-child { margin-bottom: 0; }
+
+    .issue-icon-box {
+      width: 24px;
+      height: 24px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    .issue-icon-box.red { background: rgba(239, 68, 68, 0.15); }
+    .issue-icon-box.yellow { background: rgba(234, 179, 8, 0.15); }
+    .issue-icon-box.green { background: rgba(34, 197, 94, 0.15); }
+
+    .issue-text { flex: 1; }
+    .issue-main { font-weight: 600; color: var(--white); margin-bottom: 2px; }
+    .issue-sub { color: var(--gray-text); font-size: 10px; }
+
+    .primary-issue-box {
+      margin-top: 12px;
+      padding: 10px 12px;
+      background: rgba(211, 251, 64, 0.08);
+      border: 1px solid rgba(211, 251, 64, 0.2);
+      border-radius: 6px;
+    }
+
+    .primary-issue-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand);
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .primary-issue-text { font-size: 11px; color: var(--gray-text); }
+
+    /* Task Stats Grid */
+    .task-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .task-stat-card {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 8px;
+      padding: 12px 14px;
+      text-align: center;
+    }
+
+    .task-stat-value {
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .task-stat-label {
+      font-size: 9px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .task-stat-sub {
+      font-size: 10px;
+      color: var(--gray-text);
+      margin-top: 4px;
+    }
+
+    /* Data Table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+
+    .data-table th {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-light);
+      font-weight: 600;
+      border-bottom: 1px solid var(--gray-dark);
+      background: var(--dark-2);
+    }
+
+    .data-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--gray-dark);
+      color: var(--gray-text);
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--dark-2); }
+
+    .rep-name { font-weight: 600; color: var(--white); }
+
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .status-badge.excellent { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .status-badge.good { background: rgba(59, 130, 246, 0.15); color: var(--blue); }
+    .status-badge.fair { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+    .status-badge.needs-coaching { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+
+    /* Pipeline Performance */
+    .pipeline-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .pipeline-stat-card {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 8px;
+      padding: 14px 16px;
+      text-align: center;
+    }
+
+    .pipeline-stat-value {
+      font-size: 26px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+
+    .pipeline-stat-label {
+      font-size: 9px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .pipeline-stat-sub {
+      font-size: 10px;
+      color: var(--gray-text);
+      margin-top: 4px;
+    }
+
+    .appt-marking-box {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 8px;
+      padding: 14px 16px;
+    }
+
+    .appt-marking-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .appt-marking-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .marking-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+    }
+
+    .marking-icon { font-size: 12px; }
+    .marking-label { color: var(--gray-text); }
+    .marking-value { font-weight: 600; margin-left: auto; }
+
+    .marking-warning {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 10px 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 6px;
+    }
+
+    .warning-icon { font-size: 14px; flex-shrink: 0; }
+    .warning-text { font-size: 11px; color: var(--gray-text); }
+    .warning-text strong { color: var(--red); }
+
+    /* Instruction Log - Improved Spacing */
+    .action-filter-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .action-filter-chip {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .action-filter-chip.all {
+      background: var(--dark-2);
+      border-color: var(--gray-dark);
+      color: var(--gray-text);
+    }
+
+    .action-filter-chip.all.active,
+    .action-filter-chip.all:hover {
+      background: var(--gray-dark);
+      color: var(--white);
+    }
+
+    .action-filter-chip.follow-up {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--blue);
+    }
+
+    .action-filter-chip.follow-up.active,
+    .action-filter-chip.follow-up:hover {
+      background: var(--blue);
+      color: var(--white);
+    }
+
+    .action-filter-chip.appointment {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--green);
+    }
+
+    .action-filter-chip.appointment.active,
+    .action-filter-chip.appointment:hover {
+      background: var(--green);
+      color: var(--black);
+    }
+
+    .action-filter-chip.remove {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+    }
+
+    .action-filter-chip.remove.active,
+    .action-filter-chip.remove:hover {
+      background: var(--red);
+      color: var(--white);
+    }
+
+    .filter-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      background: rgba(0,0,0,0.2);
+      border-radius: 9px;
+      font-size: 10px;
+    }
+
+    /* Instruction Log Entry - Better Spacing */
+    .log-entry-v2 {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .log-entry-v2:hover { border-color: var(--gray-mid); }
+    .log-entry-v2:last-child { margin-bottom: 0; }
+
+    .log-entry-v2.follow-up { border-left: 4px solid var(--blue); }
+    .log-entry-v2.appointment { border-left: 4px solid var(--green); }
+    .log-entry-v2.remove { border-left: 4px solid var(--red); }
+
+    .log-entry-main {
+      display: grid;
+      grid-template-columns: 200px 1fr auto;
+      gap: 16px;
+      padding: 14px 16px;
+      align-items: center;
+    }
+
+    .log-people {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-rep-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .log-lead-name {
+      font-size: 11px;
+      color: var(--brand);
+    }
+
+    .log-action-area { flex: 1; }
+
+    .log-action-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .log-action-badge.follow-up {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--blue);
+    }
+
+    .log-action-badge.appointment {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--green);
+    }
+
+    .log-action-badge.remove {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+    }
+
+    .log-action-data {
+      font-size: 11px;
+      color: var(--gray-text);
+    }
+
+    .log-action-data strong {
+      color: var(--white);
+      font-weight: 600;
+    }
+
+    .log-time-quality {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+    }
+
+    .log-timestamp {
+      font-size: 10px;
+      color: var(--gray-light);
+    }
+
+    .quality-badge-v2 {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .quality-badge-v2.complete { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+    .quality-badge-v2.partial { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
+    .quality-badge-v2.incomplete { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+    .quality-badge-v2.empty { background: rgba(107, 114, 128, 0.15); color: var(--gray-light); }
+
+    .log-instruction-box {
+      padding: 12px 16px;
+      background: var(--dark);
+      border-top: 1px solid var(--gray-dark);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-instruction-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--gray-light);
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .log-instruction-text {
+      color: var(--white);
+      font-style: italic;
+    }
+
+    .log-details-box {
+      padding: 10px 16px;
+      background: var(--dark);
+      border-top: 1px solid var(--gray-dark);
+      font-size: 11px;
+    }
+
+    .log-details-box.follow-up {
+      border-left: 3px solid var(--blue);
+    }
+
+    .log-details-box.appointment {
+      border-left: 3px solid var(--green);
+    }
+
+    .log-details-box.remove {
+      border-left: 3px solid var(--red);
+    }
+
+    /* Quality Component Markers */
+    .quality-components {
+      display: flex;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .quality-marker {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      padding: 2px 5px;
+      border-radius: 3px;
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .quality-marker.has {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--green);
+    }
+
+    .quality-marker.missing {
+      background: rgba(239, 68, 68, 0.12);
+      color: var(--red);
+    }
+
+    /* Instruction Log Controls */
+    .log-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .log-sort-dropdown {
+      padding: 6px 12px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      color: var(--white);
+      font-size: 11px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .log-sort-dropdown:focus {
+      outline: none;
+      border-color: var(--brand);
+    }
+
+    .log-details-label {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .log-details-label.follow-up { color: var(--blue); }
+    .log-details-label.appointment { color: var(--green); }
+    .log-details-label.remove { color: var(--red); }
+
+    .log-details-content {
+      color: var(--gray-text);
+      line-height: 1.5;
+    }
+
+    .log-details-datetime {
+      font-weight: 600;
+      color: var(--white);
+      margin-bottom: 6px;
+    }
+
+    /* Info Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .modal-overlay.visible { display: flex; }
+
+    .modal-content {
+      background: var(--dark);
+      border: 1px solid var(--gray-dark);
+      border-radius: 12px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--gray-dark);
+    }
+
+    .modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      color: var(--gray-light);
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover { background: var(--gray-dark); color: var(--white); }
+
+    .modal-body { padding: 18px; }
+
+    .info-section { margin-bottom: 18px; }
+    .info-section:last-child { margin-bottom: 0; }
+
+    .info-section-title {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--brand);
+      margin-bottom: 8px;
+      font-weight: 700;
+    }
+
+    .info-text { font-size: 12px; color: var(--gray-text); line-height: 1.6; }
+
+    .info-formula {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 6px;
+      padding: 12px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 12px;
+      color: var(--brand);
+      margin: 8px 0;
+    }
+
+    .info-list { list-style: none; margin-top: 8px; }
+
+    .info-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 6px 0;
+      font-size: 12px;
+      color: var(--gray-text);
+    }
+
+    .info-list li::before {
+      content: "✓";
+      color: var(--brand);
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* No Data State */
+    .no-data {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--gray-light);
+    }
+
+    .no-data-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+    .no-data-text { font-size: 12px; }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .risk-grid { grid-template-columns: repeat(2, 1fr); }
+      .task-stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .pipeline-stats-grid { grid-template-columns: 1fr; }
+      .adoption-components-grid { grid-template-columns: 1fr; }
+      .log-entry-main { grid-template-columns: 1fr; gap: 10px; }
+      .adoption-hero-main { flex-direction: column; align-items: flex-start; }
+    }
+
+    @media (max-width: 768px) {
+      .stats-grid, .risk-grid, .task-stats-grid { grid-template-columns: 1fr; }
+      .north-star-content { flex-direction: column; align-items: flex-start; }
+      .north-star-breakdown { margin-left: 0; margin-top: 12px; }
+      .compounding-main { flex-direction: column; align-items: flex-start; }
+      .top-nav { padding: 0 12px; gap: 10px; }
+      .search-container { max-width: 160px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation -->
+  <nav class="top-nav">
+    <div class="logo-container">
+      <svg class="logo" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
+        <path fill="#ffffff" d="M95.36,23.12l-.26,72.32h-20.88s.23-63.83.23-63.83c.01-4.09-5.18-5.66-7.39-2.23L24.49,95.43H.36S54.82,10.91,54.82,10.91c12.14-18.83,40.62-10.26,40.54,12.21Z"/>
+        <path fill="#ffffff" d="M65.45,70.04c.02-6.31-7.98-8.72-11.39-3.43l-18.58,28.83h29.88s.09-25.4.09-25.4Z"/>
+      </svg>
+      <span class="logo-text">
+        <span class="logo-text-main">Dealership Accelerator</span>
+        <span class="logo-text-os">OS</span>
+      </span>
+    </div>
+
+    <div class="search-container">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search clients..." oninput="handleSearch()">
+      <div class="search-results" id="searchResults"></div>
+    </div>
+
+    <div class="date-picker-container">
+      <button class="date-picker-btn" onclick="toggleDatePicker()">
+        <span class="date-picker-icon">📅</span>
+        <span id="dateRangeLabel">Last 30 Days</span>
+        <span>▼</span>
+      </button>
+      <div class="date-picker-dropdown" id="datePickerDropdown">
+        <div class="date-preset-grid">
+          <button class="date-preset-btn" onclick="setDateRange('mtd')">Month to Date</button>
+          <button class="date-preset-btn" onclick="setDateRange('l7d')">Last 7 Days</button>
+          <button class="date-preset-btn active" onclick="setDateRange('l30d')">Last 30 Days</button>
+          <button class="date-preset-btn" onclick="setDateRange('l90d')">Last 90 Days</button>
+          <button class="date-preset-btn" onclick="setDateRange('ytd')">Year to Date</button>
+          <button class="date-preset-btn" onclick="setDateRange('all')">All Time</button>
+        </div>
+        <div class="date-custom-section">
+          <div class="date-custom-label">Custom Range</div>
+          <div class="date-custom-inputs">
+            <input type="date" class="date-custom-input" id="startDate">
+            <input type="date" class="date-custom-input" id="endDate">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <div class="live-badge">
+        <div class="live-dot"></div>
+        Live
+      </div>
+      <button class="refresh-btn" onclick="refreshData()">
+        <span class="refresh-icon">🔄</span>
+        Refresh
+      </button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading data...</div>
+    </div>
+
+    <!-- Error Message -->
+    <div class="error-message" id="errorMessage">
+      <span class="error-icon">⚠️</span>
+      <span class="error-text" id="errorText">Failed to load data.</span>
+      <button class="error-dismiss" onclick="hideError()">×</button>
+    </div>
+
+    <!-- Portfolio Page -->
+    <div id="page-portfolio" class="page-content active">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Client Dashboard</h1>
+          <p class="page-subtitle" id="lastUpdated">Last updated: --</p>
+        </div>
+      </div>
+
+      <!-- Portfolio Summary Section Title -->
+      <div class="section-title">Portfolio Summary</div>
+
+      <!-- North Star Compounding Rate -->
+      <div class="north-star-card inactive" id="northStarCard">
+        <div class="north-star-header">
+          <div class="north-star-label">
+            <span>⭐ COMPOUNDING RATE</span>
+            <span style="color: var(--gray-light); font-size: 9px;">NORTH STAR</span>
+          </div>
+          <button class="info-btn" onclick="showInfoModal()">ℹ️</button>
+        </div>
+        <div class="north-star-content">
+          <div class="north-star-value">
+            <span class="north-star-number inactive" id="avgCompoundingRate">--</span>
+            <div class="north-star-status inactive" id="portfolioStatus">
+              <span class="status-icon">○</span>
+              <span>LOADING...</span>
+            </div>
+          </div>
+          <div class="north-star-breakdown">
+            <div class="breakdown-item">
+              <div class="breakdown-count active" id="activeCount">--</div>
+              <div class="breakdown-label">⚡ ACTIVE (≥100%)</div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-count inactive" id="inactiveCount">--</div>
+              <div class="breakdown-label">○ INACTIVE (&lt;100%)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-label">Avg Health Score</div>
+          <div class="stat-value" id="avgHealth">--</div>
+          <div class="stat-subtext" id="avgHealthSub">Portfolio average</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Tasks</div>
+          <div class="stat-value" id="totalTasks">--</div>
+          <div class="stat-subtext" id="completedTasks">-- completed (--% completion)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Show Rate</div>
+          <div class="stat-value" id="showRate">--</div>
+          <div class="stat-subtext" id="showRateSub">-- marked of -- past (--% marked)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Appointments</div>
+          <div class="stat-value" id="totalAppts">--</div>
+          <div class="stat-subtext" id="apptsSub">-- showed, -- unmarked</div>
+        </div>
+      </div>
+
+      <!-- Risk Distribution -->
+      <div class="section-title">Risk Distribution</div>
+      <div class="risk-grid" id="riskGrid">
+        <div class="risk-card critical" data-risk="CRITICAL" onclick="filterByRisk('CRITICAL')">
+          <div class="risk-icon">🔴</div>
+          <div class="risk-count" id="criticalCount">--</div>
+          <div class="risk-label">Critical</div>
+        </div>
+        <div class="risk-card at-risk" data-risk="AT_RISK" onclick="filterByRisk('AT_RISK')">
+          <div class="risk-icon">🟠</div>
+          <div class="risk-count" id="atRiskCount">--</div>
+          <div class="risk-label">At Risk</div>
+        </div>
+        <div class="risk-card attention" data-risk="NEEDS_ATTENTION" onclick="filterByRisk('NEEDS_ATTENTION')">
+          <div class="risk-icon">🟡</div>
+          <div class="risk-count" id="attentionCount">--</div>
+          <div class="risk-label">Needs Attention</div>
+        </div>
+        <div class="risk-card healthy" data-risk="HEALTHY" onclick="filterByRisk('HEALTHY')">
+          <div class="risk-icon">🟢</div>
+          <div class="risk-count" id="healthyCount">--</div>
+          <div class="risk-label">Healthy</div>
+        </div>
+      </div>
+
+      <!-- Account List -->
+      <div class="account-list-header">
+        <div class="section-title" style="margin-bottom: 0;">All Clients</div>
+        <select class="sort-dropdown" id="sortDropdown" onchange="sortAccounts()">
+          <option value="compounding_asc">Sort: Compounding Rate (Low→High)</option>
+          <option value="compounding_desc">Sort: Compounding Rate (High→Low)</option>
+          <option value="health_asc">Sort: Health Score (Low→High)</option>
+          <option value="health_desc">Sort: Health Score (High→Low)</option>
+          <option value="name">Sort: Name (A-Z)</option>
+          <option value="overdue">Sort: Overdue Tasks</option>
+        </select>
+      </div>
+
+      <div class="account-list" id="accountList"></div>
+    </div>
+
+    <!-- Client Detail Page -->
+    <div id="page-client" class="page-content">
+      <button class="back-btn" onclick="showPage('portfolio')">
+        <span>←</span>
+        Back to All Clients
+      </button>
+      <div id="clientDetailContent"></div>
+    </div>
+  </main>
+
+  <!-- Info Modal -->
+  <div class="modal-overlay" id="infoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⭐</span>
+          What is Compounding Rate?
+        </div>
+        <button class="modal-close" onclick="closeInfoModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="info-section">
+          <div class="info-section-title">The North Star Metric</div>
+          <p class="info-text">
+            Compounding Rate measures how efficiently your team builds pipeline momentum. It shows whether your pipeline is growing or shrinking.
+          </p>
+        </div>
+        <div class="info-section">
+          <div class="info-section-title">How It's Calculated</div>
+          <div class="info-formula">
+            (Tasks Created + Appointments Booked) ÷ New Leads × 100
+          </div>
+          <p class="info-text" style="margin-top: 8px;">
+            Uses Last 30 Days data regardless of selected date range.
+          </p>
+        </div>
+        <div class="info-section">
+          <div class="info-section-title">Activation Threshold: 100%</div>
+          <p class="info-text">
+            <strong style="color: var(--red);">Below 100%</strong> = Pipeline shrinking – leads are falling through<br>
+            <strong style="color: var(--green);">100%+</strong> = Pipeline compounding – building momentum
+          </p>
+        </div>
+        <div class="info-section">
+          <div class="info-section-title">Why It Matters</div>
+          <ul class="info-list">
+            <li>When active, pipeline GROWS instead of resetting each month</li>
+            <li>Single biggest factor for dealership growth</li>
+            <li>Low adoption directly reduces the rate</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // SUPABASE CONFIGURATION
+    // ========================================
+    const SUPABASE_URL = 'https://gamwimamcvgakcetdypm.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_1prVZrYhMgR-cvRLuiKnqw_bFet_YV1';
+
+    // ========================================
+    // STATE
+    // ========================================
+    let accounts = [];
+    let filteredAccounts = [];
+    let selectedAccount = null;
+    let currentRiskFilter = null;
+    let currentDateRange = 'l30d';
+    let currentActionFilter = 'all';
+    let currentRepFilter = 'all';
+    let currentLogSort = 'newest';
+    let currentInstructionLog = [];
+    let currentReps = [];
+
+    // ========================================
+    // API FUNCTIONS
+    // ========================================
+    async function fetchFromSupabase(viewName, options = {}) {
+      let url = `${SUPABASE_URL}/rest/v1/${viewName}?select=*`;
+      
+      if (options.filter) url += `&${options.filter}`;
+      if (options.order) url += `&order=${options.order}`;
+      if (options.limit) url += `&limit=${options.limit}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`${viewName}: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    }
+
+    // ========================================
+    // DATA LOADING
+    // ========================================
+    async function loadDashboardData() {
+      showLoading(true);
+      hideError();
+
+      try {
+        accounts = await fetchFromSupabase('v_cs_account_health');
+        filteredAccounts = [...accounts];
+        updatePortfolioStats();
+        sortAccounts();
+        updateLastUpdated();
+        showLoading(false);
+      } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showError(error.message);
+        showLoading(false);
+      }
+    }
+
+    async function loadClientDetail(locationId) {
+      showLoading(true);
+      hideError();
+      
+      try {
+        const results = await Promise.allSettled([
+          fetchFromSupabase('v_cs_account_health', { filter: `location_id=eq.${locationId}` }),
+          fetchFromSupabase('v_lost_opportunity', { filter: `location_id=eq.${locationId}` }),
+          fetchFromSupabase('v_pipeline_funnel', { filter: `location_id=eq.${locationId}` }),
+          fetchFromSupabase('v_rep_complete_scorecard', { filter: `location_id=eq.${locationId}`, order: 'closed_loop_pct.desc.nullslast' }),
+          fetchFromSupabase('v_instruction_log', { filter: `location_id=eq.${locationId}`, order: 'reactivated_at.desc', limit: 25 }),
+          fetchFromSupabase('v_pipeline_funnel_by_source', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' })
+        ]);
+
+        const accountData = results[0].status === 'fulfilled' ? results[0].value : [];
+        const lostOppData = results[1].status === 'fulfilled' ? results[1].value : [];
+        const pipelineData = results[2].status === 'fulfilled' ? results[2].value : [];
+        const repData = results[3].status === 'fulfilled' ? results[3].value : [];
+        const instructionLogData = results[4].status === 'fulfilled' ? results[4].value : [];
+        const sourceData = results[5].status === 'fulfilled' ? results[5].value : [];
+
+        selectedAccount = accountData[0];
+        currentInstructionLog = instructionLogData;
+        currentActionFilter = 'all';
+        currentRepFilter = 'all';
+        currentLogSort = 'newest';
+        
+        // Extract unique reps from instruction log
+        const repNames = new Set();
+        instructionLogData.forEach(log => {
+          const repName = log.assigned_rep_name || log.rep_name;
+          if (repName) repNames.add(repName);
+        });
+        currentReps = Array.from(repNames).sort();
+        
+        if (!selectedAccount) {
+          throw new Error('Client not found');
+        }
+
+        renderClientDetail({
+          account: selectedAccount,
+          lostOpp: lostOppData[0],
+          pipeline: pipelineData[0],
+          reps: repData,
+          instructionLog: instructionLogData,
+          sources: sourceData
+        });
+
+        showLoading(false);
+      } catch (error) {
+        console.error('Error loading client detail:', error);
+        showError(error.message);
+        showLoading(false);
+      }
+    }
+
+    // ========================================
+    // PORTFOLIO STATS
+    // ========================================
+    function updatePortfolioStats() {
+      if (!accounts.length) return;
+
+      // Compounding Rate
+      const accountsWithRate = accounts.filter(a => a.compounding_rate !== null && a.compounding_rate !== undefined);
+      const avgRate = accountsWithRate.length 
+        ? Math.round(accountsWithRate.reduce((sum, a) => sum + parseFloat(a.compounding_rate || 0), 0) / accountsWithRate.length)
+        : 0;
+      
+      const activeCount = accounts.filter(a => parseFloat(a.compounding_rate || 0) >= 100).length;
+      const inactiveCount = accounts.filter(a => parseFloat(a.compounding_rate || 0) < 100 || !a.compounding_rate).length;
+
+      // Color the rate based on level
+      const rateEl = document.getElementById('avgCompoundingRate');
+      rateEl.textContent = avgRate + '%';
+      if (avgRate >= 100) {
+        rateEl.className = 'north-star-number active';
+      } else if (avgRate >= 80) {
+        rateEl.className = 'north-star-number';
+        rateEl.style.color = 'var(--yellow)';
+      } else {
+        rateEl.className = 'north-star-number';
+        rateEl.style.color = 'var(--red)';
+      }
+
+      document.getElementById('activeCount').textContent = activeCount;
+      document.getElementById('inactiveCount').textContent = inactiveCount;
+
+      const northStarCard = document.getElementById('northStarCard');
+      const portfolioStatus = document.getElementById('portfolioStatus');
+      
+      if (avgRate >= 100) {
+        northStarCard.className = 'north-star-card active';
+        portfolioStatus.className = 'north-star-status active';
+        portfolioStatus.innerHTML = '<span class="status-icon">⚡</span><span>PORTFOLIO COMPOUNDING ACTIVE</span>';
+      } else {
+        northStarCard.className = 'north-star-card inactive';
+        portfolioStatus.className = 'north-star-status inactive';
+        portfolioStatus.innerHTML = `<span class="status-icon">○</span><span>PORTFOLIO INACTIVE</span>`;
+      }
+
+      // Health Score
+      const avgHealth = Math.round(accounts.reduce((sum, a) => sum + (a.adoption_score || 0), 0) / accounts.length);
+      const healthEl = document.getElementById('avgHealth');
+      healthEl.textContent = avgHealth;
+      healthEl.className = `stat-value ${avgHealth >= 60 ? 'green' : avgHealth >= 40 ? 'orange' : 'red'}`;
+
+      // Tasks
+      const totalTasks = accounts.reduce((sum, a) => sum + (a.total_tasks || 0), 0);
+      const completedTasks = accounts.reduce((sum, a) => sum + (a.completed_tasks || 0), 0);
+      const completionPct = totalTasks ? Math.round(100 * completedTasks / totalTasks) : 0;
+      document.getElementById('totalTasks').textContent = totalTasks.toLocaleString();
+      document.getElementById('completedTasks').textContent = `${completedTasks.toLocaleString()} completed (${completionPct}% completion)`;
+
+      // Show Rate
+      const totalShowed = accounts.reduce((sum, a) => sum + (a.showed || 0), 0);
+      const totalNoShows = accounts.reduce((sum, a) => sum + (a.no_shows || 0), 0);
+      const markedAppts = totalShowed + totalNoShows;
+      const showRate = markedAppts > 0 ? Math.round(100 * totalShowed / markedAppts) : 0;
+      const showRateEl = document.getElementById('showRate');
+      showRateEl.textContent = showRate + '%';
+      showRateEl.className = `stat-value ${showRate >= 60 ? 'green' : showRate >= 40 ? 'orange' : 'red'}`;
+      
+      const totalPastAppts = accounts.reduce((sum, a) => sum + ((a.showed || 0) + (a.no_shows || 0) + (a.unmarked_appointments || 0)), 0);
+      const markingPct = totalPastAppts > 0 ? Math.round(100 * markedAppts / totalPastAppts) : 0;
+      document.getElementById('showRateSub').textContent = `${markedAppts} marked of ${totalPastAppts} past (${markingPct}% marked)`;
+
+      // Appointments
+      const totalAppts = accounts.reduce((sum, a) => sum + (a.appointments_last_30 || 0), 0);
+      const unmarkedAppts = accounts.reduce((sum, a) => sum + (a.unmarked_appointments || 0), 0);
+      document.getElementById('totalAppts').textContent = totalAppts.toLocaleString();
+      document.getElementById('apptsSub').textContent = `${totalShowed} showed, ${unmarkedAppts} unmarked`;
+
+      // Risk Distribution (4 categories per blueprint)
+      const riskCounts = {
+        CRITICAL: accounts.filter(a => a.risk_level === 'CRITICAL').length,
+        AT_RISK: accounts.filter(a => a.risk_level === 'AT_RISK').length,
+        NEEDS_ATTENTION: accounts.filter(a => a.risk_level === 'NEEDS_ATTENTION').length,
+        HEALTHY: accounts.filter(a => a.risk_level === 'HEALTHY' || a.risk_level === 'EXCELLENT').length
+      };
+
+      document.getElementById('criticalCount').textContent = riskCounts.CRITICAL;
+      document.getElementById('atRiskCount').textContent = riskCounts.AT_RISK;
+      document.getElementById('attentionCount').textContent = riskCounts.NEEDS_ATTENTION;
+      document.getElementById('healthyCount').textContent = riskCounts.HEALTHY;
+    }
+
+    // ========================================
+    // ACCOUNT CARDS RENDERING
+    // ========================================
+    function renderAccounts() {
+      const container = document.getElementById('accountList');
+      
+      if (filteredAccounts.length === 0) {
+        container.innerHTML = `
+          <div class="no-data">
+            <div class="no-data-icon">📋</div>
+            <div class="no-data-text">No clients match your filter</div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredAccounts.map(account => {
+        const rate = parseFloat(account.compounding_rate || 0);
+        const isActive = rate >= 100;
+        const riskClass = getRiskClass(account.risk_level);
+        const healthClass = getHealthClass(account.adoption_score);
+        const trendClass = getTrendClass(account.health_trend);
+        const trendIcon = getTrendIcon(account.health_trend);
+
+        return `
+          <div class="account-card" onclick="showClientDetail('${account.location_id}')">
+            <div class="account-header">
+              <div class="account-name-row">
+                <div class="risk-dot ${riskClass}"></div>
+                <div class="account-name">${account.dealership_name}</div>
+              </div>
+              <div class="account-meta">
+                <div class="health-badge ${healthClass}">Health: ${account.adoption_score || 0}</div>
+                <div class="trend-indicator ${trendClass}">${trendIcon} ${account.health_trend || 'STABLE'}</div>
+              </div>
+            </div>
+            <div class="account-metrics">
+              <div class="compounding-mini ${isActive ? 'active' : 'inactive'}">
+                <span>${isActive ? '⚡' : '○'}</span>
+                <span>⭐ Compounding: ${Math.round(rate)}%</span>
+                <span>${isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+              </div>
+              ${!isActive ? `
+                <div class="progress-bar-mini">
+                  <div class="fill" style="width: ${Math.min(rate, 100)}%;"></div>
+                </div>
+                <span style="font-size: 10px; color: var(--gray-light);">${Math.round(100 - rate)}% to activate</span>
+              ` : ''}
+              <div class="metric-item">
+                <span class="metric-label">Loop:</span>
+                <span class="metric-value ${getScoreColor(account.closed_loop_score)}">${account.closed_loop_score || 0}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Clarity:</span>
+                <span class="metric-value ${getScoreColor(account.clarity_score)}">${account.clarity_score || 0}%</span>
+              </div>
+              <div class="metric-item">
+                <span class="metric-label">Mark:</span>
+                <span class="metric-value">${account.marking_score || 0}%</span>
+              </div>
+            </div>
+            ${account.overdue_tasks > 0 ? `
+            <div style="font-size: 10px; color: var(--orange); margin-bottom: 8px;">⚠️ Overdue: ${account.overdue_tasks} tasks</div>
+            ` : ''}
+            <div class="account-issue">
+              <span class="issue-icon">📍</span>
+              <span>${account.primary_issue || 'Account healthy - maintain current performance'}</span>
+            </div>
+            <div class="account-footer">
+              <div class="footer-stats">
+                <div class="footer-stat">
+                  <span>📅</span>
+                  <span>Last Activity: ${formatDaysAgo(account.days_since_activity)}</span>
+                </div>
+                <div class="footer-stat">
+                  <span>📊</span>
+                  <span>Appts (period): ${account.appointments_last_30 || 0}</span>
+                </div>
+                <div class="footer-stat">
+                  <span>✅</span>
+                  <span>Show Rate: ${account.show_rate || 0}%</span>
+                </div>
+              </div>
+              <button class="view-details-btn" onclick="event.stopPropagation(); showClientDetail('${account.location_id}')">
+                View Details →
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ========================================
+    // CLIENT DETAIL RENDERING
+    // ========================================
+    function renderClientDetail({ account, lostOpp, pipeline, reps, instructionLog, sources }) {
+      const container = document.getElementById('clientDetailContent');
+      const rate = parseFloat(account.compounding_rate || 0);
+      const isActive = rate >= 100;
+      const riskClass = getRiskClass(account.risk_level);
+      const healthClass = getHealthClass(account.adoption_score);
+      const adoptionClass = getAdoptionClass(account.adoption_score);
+      
+      // Threshold rating logic for compounding
+      let thresholdClass, thresholdRating, rateColorClass;
+      if (rate >= 150) { thresholdClass = 'excellent'; thresholdRating = 'EXCELLENT'; rateColorClass = 'active'; }
+      else if (rate >= 100) { thresholdClass = 'good'; thresholdRating = 'GOOD'; rateColorClass = 'active'; }
+      else if (rate >= 80) { thresholdClass = 'close'; thresholdRating = 'CLOSE'; rateColorClass = 'close'; }
+      else { thresholdClass = 'low'; thresholdRating = 'LOW'; rateColorClass = 'low'; }
+
+      // Count actions for filter chips
+      const actionCounts = {
+        all: instructionLog.length,
+        follow_up: instructionLog.filter(l => l.action === 'follow_up').length,
+        appointment: instructionLog.filter(l => l.action === 'appointment').length,
+        remove: instructionLog.filter(l => l.action === 'remove').length
+      };
+
+      // Calculate lost opportunity data for components
+      const estLostFromOverdue = lostOpp ? Math.round(lostOpp.est_lost_from_overdue || 0) : 0;
+      const estLostFromInstructions = lostOpp ? Math.round(lostOpp.est_lost_from_poor_instructions || 0) : 0;
+      const taskToApptRate = lostOpp ? Math.round((lostOpp.appt_per_completed_task || 0) * 100) : 0;
+
+      // Generate adoption summary text
+      const adoptionSummary = generateAdoptionSummary(account, lostOpp);
+
+      container.innerHTML = `
+        <!-- Client Header -->
+        <div class="client-header">
+          <div class="client-header-content">
+            <div class="client-risk-indicator ${riskClass}">${getRiskIcon(account.risk_level)}</div>
+            <div>
+              <div class="client-name">${account.dealership_name}</div>
+              <div class="client-status">
+                <span class="health-badge ${healthClass}">Health: ${account.adoption_score || 0}</span>
+                <span class="trend-indicator ${getTrendClass(account.health_trend)}">${getTrendIcon(account.health_trend)} ${account.health_trend || 'STABLE'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADOPTION SCORE HERO SECTION -->
+        <div class="adoption-hero ${adoptionClass}">
+          <div class="adoption-hero-header">
+            <div class="adoption-hero-title">
+              <span>📊 ADOPTION SCORE</span>
+            </div>
+            <div class="adoption-status-badge ${adoptionClass}">${getAdoptionStatus(account.adoption_score)}</div>
+          </div>
+          
+          <div class="adoption-hero-main">
+            <div class="adoption-score-display">
+              <div class="adoption-score-large ${adoptionClass}">${account.adoption_score || 0}</div>
+              <div class="adoption-score-max">out of 100</div>
+            </div>
+            <div class="adoption-summary-box">
+              <div class="adoption-summary-title">
+                <span>📋</span>
+                Account Summary
+              </div>
+              <div class="adoption-summary-text">${adoptionSummary}</div>
+            </div>
+          </div>
+
+          <!-- Component Cards -->
+          <div class="adoption-components-grid">
+            <!-- Loop Closure Component -->
+            <div class="adoption-component-card ${getComponentClass(account.closed_loop_score)}">
+              <div class="component-card-header">
+                <div class="component-card-title">🔄 Loop Closure</div>
+                <div class="component-card-weight">40% weight</div>
+              </div>
+              <div class="component-score-row">
+                <div class="component-score-value ${getComponentClass(account.closed_loop_score)}">${account.closed_loop_score || 0}%</div>
+                <div class="component-score-indicator" style="color: ${getScoreColorValue(account.closed_loop_score)};">
+                  ${account.closed_loop_score >= 70 ? '✓ Strong' : account.closed_loop_score >= 50 ? '~ Fair' : '✗ Needs Work'}
+                </div>
+              </div>
+              <div class="component-progress-bar">
+                <div class="component-progress-fill ${getComponentClass(account.closed_loop_score)}" style="width: ${account.closed_loop_score || 0}%;"></div>
+              </div>
+              <div class="component-factors">
+                <div class="component-factor">
+                  <div class="factor-icon ${account.completed_tasks > 0 ? 'good' : 'neutral'}">✓</div>
+                  <span class="factor-text">Completed</span>
+                  <span class="factor-value">${account.completed_tasks || 0} tasks</span>
+                </div>
+                <div class="component-factor">
+                  <div class="factor-icon ${account.overdue_tasks > 10 ? 'bad' : account.overdue_tasks > 0 ? 'warn' : 'good'}">${account.overdue_tasks > 10 ? '!' : account.overdue_tasks > 0 ? '~' : '✓'}</div>
+                  <span class="factor-text">Overdue</span>
+                  <span class="factor-value" style="color: ${account.overdue_tasks > 10 ? 'var(--red)' : account.overdue_tasks > 0 ? 'var(--orange)' : 'var(--green)'};">${account.overdue_tasks || 0} tasks</span>
+                </div>
+              </div>
+              ${estLostFromOverdue > 0 ? `
+              <div class="component-impact">
+                <span>📉 Impact:</span>
+                <span class="impact-value red">~${estLostFromOverdue} missed appts</span>
+                <span>from overdue tasks</span>
+              </div>
+              ` : `
+              <div class="component-impact">
+                <span>✅</span>
+                <span class="impact-value green">No appointments lost</span>
+                <span>from task delays</span>
+              </div>
+              `}
+            </div>
+
+            <!-- Instruction Quality Component -->
+            <div class="adoption-component-card ${getComponentClass(account.clarity_score)}">
+              <div class="component-card-header">
+                <div class="component-card-title">✍️ Instruction Quality</div>
+                <div class="component-card-weight">30% weight</div>
+              </div>
+              <div class="component-score-row">
+                <div class="component-score-value ${getComponentClass(account.clarity_score)}">${account.clarity_score || 0}%</div>
+                <div class="component-score-indicator" style="color: ${getScoreColorValue(account.clarity_score)};">
+                  ${account.clarity_score >= 70 ? '✓ Strong' : account.clarity_score >= 50 ? '~ Fair' : '✗ Needs Work'}
+                </div>
+              </div>
+              <div class="component-progress-bar">
+                <div class="component-progress-fill ${getComponentClass(account.clarity_score)}" style="width: ${account.clarity_score || 0}%;"></div>
+              </div>
+              <div class="component-factors">
+                <div class="component-factor">
+                  <div class="factor-icon good">✓</div>
+                  <span class="factor-text">Complete (Context+Action+Timing)</span>
+                  <span class="factor-value">${account.clarity_score || 0}%</span>
+                </div>
+                <div class="component-factor">
+                  <div class="factor-icon ${(100 - (account.clarity_score || 0)) > 30 ? 'bad' : 'warn'}">~</div>
+                  <span class="factor-text">Partial / Incomplete</span>
+                  <span class="factor-value">${100 - (account.clarity_score || 0)}%</span>
+                </div>
+              </div>
+              ${estLostFromInstructions > 0 ? `
+              <div class="component-impact">
+                <span>📉 Impact:</span>
+                <span class="impact-value red">~${estLostFromInstructions} missed appts</span>
+                <span>from poor instructions</span>
+              </div>
+              ` : `
+              <div class="component-impact">
+                <span>✅</span>
+                <span class="impact-value green">Quality instructions</span>
+                <span>driving conversions</span>
+              </div>
+              `}
+            </div>
+
+            <!-- Appointment Marking Component -->
+            <div class="adoption-component-card ${getComponentClass(account.marking_score)}">
+              <div class="component-card-header">
+                <div class="component-card-title">📅 Appointment Marking</div>
+                <div class="component-card-weight">30% weight</div>
+              </div>
+              <div class="component-score-row">
+                <div class="component-score-value ${getComponentClass(account.marking_score)}">${account.marking_score || 0}%</div>
+                <div class="component-score-indicator" style="color: ${getScoreColorValue(account.marking_score)};">
+                  ${account.marking_score >= 70 ? '✓ Strong' : account.marking_score >= 50 ? '~ Fair' : '✗ Needs Work'}
+                </div>
+              </div>
+              <div class="component-progress-bar">
+                <div class="component-progress-fill ${getComponentClass(account.marking_score)}" style="width: ${account.marking_score || 0}%;"></div>
+              </div>
+              <div class="component-factors">
+                <div class="component-factor">
+                  <div class="factor-icon good">✓</div>
+                  <span class="factor-text">Showed</span>
+                  <span class="factor-value" style="color: var(--green);">${pipeline?.showed || account.showed || 0}</span>
+                </div>
+                <div class="component-factor">
+                  <div class="factor-icon bad">✗</div>
+                  <span class="factor-text">No-Shows</span>
+                  <span class="factor-value" style="color: var(--red);">${pipeline?.no_shows || account.no_shows || 0}</span>
+                </div>
+                <div class="component-factor">
+                  <div class="factor-icon ${account.unmarked_appointments > 5 ? 'bad' : account.unmarked_appointments > 0 ? 'warn' : 'good'}">${account.unmarked_appointments > 5 ? '!' : '~'}</div>
+                  <span class="factor-text">Unmarked</span>
+                  <span class="factor-value" style="color: ${account.unmarked_appointments > 5 ? 'var(--red)' : 'var(--orange)'};">${account.unmarked_appointments || 0}</span>
+                </div>
+              </div>
+              ${account.unmarked_appointments > 0 ? `
+              <div class="component-impact">
+                <span>⚠️ Action:</span>
+                <span class="impact-value red">${account.unmarked_appointments} appts</span>
+                <span>need outcomes recorded</span>
+              </div>
+              ` : `
+              <div class="component-impact">
+                <span>✅</span>
+                <span class="impact-value green">All outcomes tracked</span>
+              </div>
+              `}
+            </div>
+          </div>
+        </div>
+
+        <!-- Compounding Rate (North Star) -->
+        <div class="compounding-card ${isActive ? 'active' : 'inactive'} ${rateColorClass}">
+          <div class="compounding-header">
+            <div class="north-star-label">
+              <span>⭐ COMPOUNDING RATE</span>
+              <span style="color: var(--gray-light); font-size: 9px;">NORTH STAR</span>
+            </div>
+            <button class="info-btn" onclick="showInfoModal()">ℹ️</button>
+          </div>
+          <div class="compounding-main">
+            <div class="compounding-rate-display">
+              <div class="compounding-rate-value ${rateColorClass}">${Math.round(rate)}%</div>
+            </div>
+            <div class="compounding-status-box ${rateColorClass}">
+              <div class="compounding-status-title ${rateColorClass}">
+                <span>${isActive ? '⚡' : '○'}</span>
+                <span>COMPOUNDING ${isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+              </div>
+              <div class="compounding-status-desc">
+                ${isActive 
+                  ? `Pipeline has a +${Math.round(rate - 100)}% efficiency advantage. Adoption is driving growth.`
+                  : `Pipeline is ${Math.round(100 - rate)}% below activation. Improve adoption scores above to unlock compounding.`
+                }
+              </div>
+            </div>
+          </div>
+          ${!isActive ? `
+          <div class="compounding-progress">
+            <div class="compounding-progress-header">
+              <span>Progress to activation</span>
+              <span>${Math.round(rate)}% → 100%</span>
+            </div>
+            <div class="compounding-progress-bar">
+              <div class="compounding-progress-fill ${rateColorClass}" style="width: ${Math.min(rate, 100)}%;"></div>
+            </div>
+          </div>
+          ` : ''}
+          <div class="compounding-threshold">
+            <span class="threshold-badge ${thresholdClass}">${thresholdRating}</span>
+            <span style="font-size: 11px; color: var(--gray-text);">Current rating at ${Math.round(rate)}%</span>
+            <span class="threshold-goal">Goal: <strong>100%+</strong> for compounding</span>
+          </div>
+        </div>
+
+        <!-- Current Issues -->
+        <div class="issues-box">
+          <div class="issues-title">Current Issues & Actions</div>
+          ${account.overdue_tasks > 0 ? `
+          <div class="issue-item">
+            <div class="issue-icon-box red">🔴</div>
+            <div class="issue-text">
+              <div class="issue-main">${account.overdue_tasks} Overdue Tasks</div>
+              <div class="issue-sub">Reps need to close the loop – costing ~${estLostFromOverdue} appointments</div>
+            </div>
+          </div>
+          ` : ''}
+          ${account.unmarked_appointments > 0 ? `
+          <div class="issue-item">
+            <div class="issue-icon-box ${account.unmarked_appointments > 5 ? 'red' : 'yellow'}">⚠️</div>
+            <div class="issue-text">
+              <div class="issue-main">${account.unmarked_appointments} Unmarked Appointments</div>
+              <div class="issue-sub">Reps need to record show/no-show outcomes</div>
+            </div>
+          </div>
+          ` : ''}
+          ${account.clarity_score < 50 ? `
+          <div class="issue-item">
+            <div class="issue-icon-box yellow">✍️</div>
+            <div class="issue-text">
+              <div class="issue-main">Low Instruction Quality (${account.clarity_score}%)</div>
+              <div class="issue-sub">Coach reps on providing context + action + timing</div>
+            </div>
+          </div>
+          ` : ''}
+          ${(!account.overdue_tasks && !account.unmarked_appointments && account.clarity_score >= 50) ? `
+          <div class="issue-item">
+            <div class="issue-icon-box green">✅</div>
+            <div class="issue-text">
+              <div class="issue-main">No Critical Issues</div>
+              <div class="issue-sub">Keep up the great work!</div>
+            </div>
+          </div>
+          ` : ''}
+          <div class="primary-issue-box">
+            <div class="primary-issue-label">📍 Primary Focus</div>
+            <div class="primary-issue-text">${account.primary_issue || 'Account healthy - maintain current performance'}</div>
+          </div>
+        </div>
+
+        <!-- Rep Leaderboard -->
+        ${reps && reps.length > 0 ? `
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">
+              <span>👥</span>
+              Rep Leaderboard
+            </div>
+          </div>
+          <div class="section-card-body" style="padding: 0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Rep Name</th>
+                  <th>Tasks</th>
+                  <th>Completed</th>
+                  <th>Loop %</th>
+                  <th>Clarity %</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${reps.map(rep => `
+                  <tr>
+                    <td class="rep-name">${rep.rep_name || 'Unknown'}</td>
+                    <td>${rep.total_tasks || 0}</td>
+                    <td>${rep.completed_tasks || 0}</td>
+                    <td style="color: ${getScoreColorValue(rep.closed_loop_pct)};">${rep.closed_loop_pct || 0}%</td>
+                    <td style="color: ${getScoreColorValue(rep.clarity_pct)};">${rep.clarity_pct || 0}%</td>
+                    <td><span class="status-badge ${getRepStatusClass(rep.performance_status)}">${formatRepStatus(rep.performance_status)}</span></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Pipeline Performance -->
+        ${pipeline ? `
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">
+              <span>📊</span>
+              Pipeline Performance
+            </div>
+          </div>
+          <div class="section-card-body">
+            <div class="pipeline-stats-grid">
+              <div class="pipeline-stat-card">
+                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${pipeline.reply_rate || 0}%</div>
+                <div class="pipeline-stat-label">Response Rate</div>
+                <div class="pipeline-stat-sub">${pipeline.total_responses || 0} replied</div>
+              </div>
+              <div class="pipeline-stat-card">
+                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}%</div>
+                <div class="pipeline-stat-label">Appointment Rate</div>
+                <div class="pipeline-stat-sub">${pipeline.appointments_booked || 0} booked</div>
+              </div>
+              <div class="pipeline-stat-card">
+                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</div>
+                <div class="pipeline-stat-label">Show Rate</div>
+                <div class="pipeline-stat-sub">on marked appts</div>
+              </div>
+            </div>
+            <div class="appt-marking-box">
+              <div class="appt-marking-title">
+                <span>📋</span>
+                Appointment Marking
+              </div>
+              <div class="appt-marking-breakdown">
+                <div class="marking-row">
+                  <span class="marking-label">Past Appointments:</span>
+                  <span class="marking-value">${pipeline.past_appointments || 0}</span>
+                </div>
+                <div class="marking-row">
+                  <span class="marking-icon">✅</span>
+                  <span class="marking-label">Showed:</span>
+                  <span class="marking-value" style="color: var(--green);">${pipeline.showed || 0}</span>
+                </div>
+                <div class="marking-row">
+                  <span class="marking-icon">❌</span>
+                  <span class="marking-label">No-Show:</span>
+                  <span class="marking-value" style="color: var(--red);">${pipeline.no_shows || 0}</span>
+                </div>
+                <div class="marking-row">
+                  <span class="marking-icon">⚠️</span>
+                  <span class="marking-label">Unmarked:</span>
+                  <span class="marking-value" style="color: var(--orange);">${pipeline.unmarked_appointments || 0}</span>
+                </div>
+              </div>
+              ${pipeline.unmarked_appointments > 0 ? `
+              <div class="marking-warning">
+                <span class="warning-icon">⚠️</span>
+                <div class="warning-text"><strong>${pipeline.unmarked_appointments} appointments need outcomes recorded.</strong></div>
+              </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Lead Source Leaderboard -->
+        ${sources && sources.length > 0 ? `
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">
+              <span>🏆</span>
+              Lead Source Leaderboard
+            </div>
+          </div>
+          <div class="section-card-body" style="padding: 0;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Source</th>
+                  <th>Leads</th>
+                  <th>Reply %</th>
+                  <th>Book %</th>
+                  <th>Show %</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${sources.slice(0, 8).map(src => `
+                  <tr>
+                    <td class="rep-name">${src.lead_source || 'Unknown'}</td>
+                    <td>${src.total_leads || 0}</td>
+                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${src.reply_rate || 0}%</td>
+                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${src.booking_rate || 0}%</td>
+                    <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate || '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        ` : ''}
+
+        <!-- Instruction Log -->
+        ${instructionLog && instructionLog.length > 0 ? `
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">
+              <span>📝</span>
+              Instruction Log
+            </div>
+          </div>
+          <div class="section-card-body">
+            <!-- Log Controls -->
+            <div class="log-controls">
+              <!-- Action Filter Chips -->
+              <div class="action-filter-bar" style="margin-bottom: 0;">
+                <div class="action-filter-chip all ${currentActionFilter === 'all' ? 'active' : ''}" onclick="filterInstructionLog('all')">
+                  All
+                  <span class="filter-count">${actionCounts.all}</span>
+                </div>
+                <div class="action-filter-chip follow-up ${currentActionFilter === 'follow_up' ? 'active' : ''}" onclick="filterInstructionLog('follow_up')">
+                  📤 Follow Up
+                  <span class="filter-count">${actionCounts.follow_up}</span>
+                </div>
+                <div class="action-filter-chip appointment ${currentActionFilter === 'appointment' ? 'active' : ''}" onclick="filterInstructionLog('appointment')">
+                  📅 Appointment
+                  <span class="filter-count">${actionCounts.appointment}</span>
+                </div>
+                <div class="action-filter-chip remove ${currentActionFilter === 'remove' ? 'active' : ''}" onclick="filterInstructionLog('remove')">
+                  🚫 Remove
+                  <span class="filter-count">${actionCounts.remove}</span>
+                </div>
+              </div>
+              
+              <!-- Sort & Rep Filter -->
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <select class="log-sort-dropdown" id="repFilterDropdown" onchange="filterByRep(this.value)">
+                  <option value="all">All Reps</option>
+                  ${currentReps.map(rep => `<option value="${rep}" ${currentRepFilter === rep ? 'selected' : ''}>${rep}</option>`).join('')}
+                </select>
+                <select class="log-sort-dropdown" id="logSortDropdown" onchange="sortInstructionLog(this.value)">
+                  <option value="newest" ${currentLogSort === 'newest' ? 'selected' : ''}>Newest First</option>
+                  <option value="oldest" ${currentLogSort === 'oldest' ? 'selected' : ''}>Oldest First</option>
+                  <option value="rep_asc" ${currentLogSort === 'rep_asc' ? 'selected' : ''}>Rep (A-Z)</option>
+                  <option value="rep_desc" ${currentLogSort === 'rep_desc' ? 'selected' : ''}>Rep (Z-A)</option>
+                </select>
+              </div>
+            </div>
+            
+            <!-- Log Entries -->
+            <div id="instructionLogEntries">
+              ${renderInstructionLogEntries(instructionLog)}
+            </div>
+          </div>
+        </div>
+        ` : ''}
+      `;
+    }
+
+    function generateAdoptionSummary(account, lostOpp) {
+      const score = account.adoption_score || 0;
+      const loop = account.closed_loop_score || 0;
+      const clarity = account.clarity_score || 0;
+      const marking = account.marking_score || 0;
+      const overdue = account.overdue_tasks || 0;
+      const unmarked = account.unmarked_appointments || 0;
+
+      let summary = '';
+      
+      if (score >= 70) {
+        summary = `<strong>${account.dealership_name}</strong> is performing well with solid adoption across all metrics. `;
+        if (loop >= 70) summary += `Loop closure is strong at ${loop}%. `;
+        if (clarity >= 70) summary += `Instruction quality is excellent. `;
+        summary += `Continue current practices to maintain compounding momentum.`;
+      } else if (score >= 50) {
+        summary = `<strong>${account.dealership_name}</strong> has moderate adoption with room for improvement. `;
+        const weakest = Math.min(loop, clarity, marking);
+        if (weakest === loop) summary += `Focus on closing the loop – ${overdue} tasks are overdue. `;
+        else if (weakest === clarity) summary += `Instruction quality needs attention – coach reps on context+action+timing. `;
+        else summary += `Appointment marking is the bottleneck – ${unmarked} outcomes need recording. `;
+      } else {
+        summary = `<strong>${account.dealership_name}</strong> requires immediate attention. `;
+        if (overdue > 10) summary += `${overdue} overdue tasks are causing significant pipeline loss. `;
+        if (clarity < 40) summary += `Poor instruction quality is reducing AI effectiveness. `;
+        if (unmarked > 5) summary += `${unmarked} unmarked appointments prevent proper follow-up. `;
+        summary += `Address these issues to activate compounding.`;
+      }
+
+      return summary;
+    }
+
+    function renderInstructionLogEntries(logs) {
+      // Apply action filter
+      let filteredLogs = currentActionFilter === 'all' 
+        ? logs 
+        : logs.filter(l => l.action === currentActionFilter);
+      
+      // Apply rep filter
+      if (currentRepFilter !== 'all') {
+        filteredLogs = filteredLogs.filter(l => 
+          (l.assigned_rep_name || l.rep_name) === currentRepFilter
+        );
+      }
+      
+      // Apply sorting
+      filteredLogs = [...filteredLogs].sort((a, b) => {
+        const dateA = new Date(a.reactivated_at || a.created_at);
+        const dateB = new Date(b.reactivated_at || b.created_at);
+        const repA = (a.assigned_rep_name || a.rep_name || '').toLowerCase();
+        const repB = (b.assigned_rep_name || b.rep_name || '').toLowerCase();
+        
+        switch (currentLogSort) {
+          case 'oldest': return dateA - dateB;
+          case 'rep_asc': return repA.localeCompare(repB);
+          case 'rep_desc': return repB.localeCompare(repA);
+          case 'newest':
+          default: return dateB - dateA;
+        }
+      });
+
+      if (filteredLogs.length === 0) {
+        return `
+          <div class="no-data">
+            <div class="no-data-icon">📝</div>
+            <div class="no-data-text">No ${currentActionFilter === 'all' ? '' : currentActionFilter.replace('_', ' ')} instructions found${currentRepFilter !== 'all' ? ` for ${currentRepFilter}` : ''}</div>
+          </div>
+        `;
+      }
+
+      return filteredLogs.map(log => {
+        const action = log.action || 'follow_up';
+        const actionClass = action.replace('_', '-');
+        
+        // Quality component markers
+        const hasContext = log.has_context;
+        const hasAction = log.has_action;
+        const hasTiming = log.has_timing;
+        
+        let actionData = '';
+        let detailsBox = '';
+        
+        if (action === 'appointment') {
+          actionData = `<strong>📅 ${formatDateTime(log.appointment_time)}</strong>`;
+          if (log.appointment_summary) {
+            detailsBox = `
+              <div class="log-details-box appointment">
+                <div class="log-details-label appointment">Appointment Details</div>
+                <div class="log-details-datetime">${formatDateTime(log.appointment_time)}</div>
+                <div class="log-details-content">${log.appointment_summary}</div>
+              </div>
+            `;
+          }
+        } else if (action === 'follow_up') {
+          actionData = `<strong>📤 ${formatDateTime(log.follow_up_date)}</strong>`;
+          if (log.follow_up_message) {
+            detailsBox = `
+              <div class="log-details-box follow-up">
+                <div class="log-details-label follow-up">AI Follow-Up Message</div>
+                <div class="log-details-datetime">${formatDateTime(log.follow_up_date)}</div>
+                <div class="log-details-content">"${log.follow_up_message}"</div>
+              </div>
+            `;
+          }
+        } else if (action === 'remove') {
+          actionData = `<strong>🚫 Removed from automation</strong>`;
+          detailsBox = `
+            <div class="log-details-box remove">
+              <div class="log-details-label remove">Removal Notification</div>
+              <div class="log-details-content">Lead has been removed from AI automation per rep instruction.</div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="log-entry-v2 ${actionClass}">
+            <div class="log-entry-main">
+              <div class="log-people">
+                <div class="log-rep-name">${log.assigned_rep_name || log.rep_name || 'Unknown Rep'}</div>
+                <div class="log-lead-name">→ ${log.lead_name || log.contact_name || 'Unknown Lead'}</div>
+              </div>
+              <div class="log-action-area">
+                <div class="log-action-badge ${actionClass}">
+                  ${action === 'appointment' ? '📅 Appointment' : action === 'follow_up' ? '📤 Follow Up' : '🚫 Remove'}
+                </div>
+                <div class="log-action-data">${actionData}</div>
+              </div>
+              <div class="log-time-quality">
+                <div class="log-timestamp">${formatDate(log.reactivated_at || log.created_at)}</div>
+                <div class="quality-badge-v2 ${getQualityClass(log.clarity_level)}">${log.clarity_level || 'Unknown'}</div>
+                <div class="quality-components">
+                  <span class="quality-marker ${hasContext ? 'has' : 'missing'}" title="Context">${hasContext ? '✓' : '✗'} CTX</span>
+                  <span class="quality-marker ${hasAction ? 'has' : 'missing'}" title="Action">${hasAction ? '✓' : '✗'} ACT</span>
+                  <span class="quality-marker ${hasTiming ? 'has' : 'missing'}" title="Timing">${hasTiming ? '✓' : '✗'} TIME</span>
+                </div>
+              </div>
+            </div>
+            ${log.instruction ? `
+            <div class="log-instruction-box">
+              <div class="log-instruction-label">
+                <span>💬</span>
+                Rep Instruction
+              </div>
+              <div class="log-instruction-text">"${log.instruction}"</div>
+            </div>
+            ` : ''}
+            ${detailsBox}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function filterByRep(rep) {
+      currentRepFilter = rep;
+      document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
+    }
+
+    function sortInstructionLog(sort) {
+      currentLogSort = sort;
+      document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
+    }
+
+    function filterInstructionLog(filter) {
+      currentActionFilter = filter;
+      document.querySelectorAll('.action-filter-chip').forEach(chip => chip.classList.remove('active'));
+      const targetClass = filter === 'all' ? 'all' : filter.replace('_', '-');
+      document.querySelector(`.action-filter-chip.${targetClass}`).classList.add('active');
+      document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
+    }
+
+    // ========================================
+    // SEARCH
+    // ========================================
+    function handleSearch() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const resultsContainer = document.getElementById('searchResults');
+
+      if (!search || search.length < 2) {
+        resultsContainer.classList.remove('visible');
+        currentRiskFilter = null;
+        document.querySelectorAll('.risk-card').forEach(c => c.classList.remove('active'));
+        filteredAccounts = [...accounts];
+        sortAccounts();
+        return;
+      }
+
+      const matches = accounts.filter(a => 
+        (a.dealership_name && a.dealership_name.toLowerCase().includes(search))
+      ).slice(0, 10);
+
+      if (matches.length === 0) {
+        resultsContainer.innerHTML = '<div class="search-result-item"><span style="color: var(--gray-light);">No clients found</span></div>';
+      } else {
+        resultsContainer.innerHTML = matches.map(account => `
+          <div class="search-result-item" onclick="selectClient('${account.location_id}')">
+            <div class="search-result-dot risk-dot ${getRiskClass(account.risk_level)}"></div>
+            <span class="search-result-name">${account.dealership_name}</span>
+            <span class="search-result-meta">Health: ${account.adoption_score || 0}</span>
+          </div>
+        `).join('');
+      }
+
+      resultsContainer.classList.add('visible');
+    }
+
+    function selectClient(locationId) {
+      document.getElementById('searchResults').classList.remove('visible');
+      document.getElementById('searchInput').value = '';
+      showClientDetail(locationId);
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.search-container')) {
+        document.getElementById('searchResults').classList.remove('visible');
+      }
+    });
+
+    // ========================================
+    // DATE PICKER
+    // ========================================
+    function toggleDatePicker() {
+      document.getElementById('datePickerDropdown').classList.toggle('visible');
+    }
+
+    function setDateRange(range) {
+      currentDateRange = range;
+      
+      const labels = {
+        mtd: 'Month to Date',
+        l7d: 'Last 7 Days',
+        l30d: 'Last 30 Days',
+        l90d: 'Last 90 Days',
+        ytd: 'Year to Date',
+        all: 'All Time'
+      };
+
+      document.getElementById('dateRangeLabel').textContent = labels[range] || 'Last 30 Days';
+      
+      document.querySelectorAll('.date-preset-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      
+      document.getElementById('datePickerDropdown').classList.remove('visible');
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.date-picker-container')) {
+        document.getElementById('datePickerDropdown').classList.remove('visible');
+      }
+    });
+
+    // ========================================
+    // FILTERING & SORTING
+    // ========================================
+    function filterByRisk(risk) {
+      const filterRisks = risk === 'HEALTHY' ? ['HEALTHY', 'EXCELLENT'] : [risk];
+      
+      if (currentRiskFilter === risk) {
+        currentRiskFilter = null;
+        document.querySelectorAll('.risk-card').forEach(c => c.classList.remove('active'));
+        filteredAccounts = [...accounts];
+      } else {
+        currentRiskFilter = risk;
+        document.querySelectorAll('.risk-card').forEach(c => {
+          c.classList.toggle('active', c.dataset.risk === risk);
+        });
+        filteredAccounts = accounts.filter(a => filterRisks.includes(a.risk_level));
+      }
+      sortAccounts();
+    }
+
+    function sortAccounts() {
+      const sortBy = document.getElementById('sortDropdown')?.value || 'compounding_asc';
+
+      filteredAccounts.sort((a, b) => {
+        switch (sortBy) {
+          case 'compounding_asc': return (a.compounding_rate || 0) - (b.compounding_rate || 0);
+          case 'compounding_desc': return (b.compounding_rate || 0) - (a.compounding_rate || 0);
+          case 'health_asc': return (a.adoption_score || 0) - (b.adoption_score || 0);
+          case 'health_desc': return (b.adoption_score || 0) - (a.adoption_score || 0);
+          case 'name': return (a.dealership_name || '').localeCompare(b.dealership_name || '');
+          case 'overdue': return (b.overdue_tasks || 0) - (a.overdue_tasks || 0);
+          default: return 0;
+        }
+      });
+
+      renderAccounts();
+    }
+
+    // ========================================
+    // UI HELPERS
+    // ========================================
+    function showPage(page) {
+      document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+      document.getElementById('page-' + page).classList.add('active');
+    }
+
+    function showClientDetail(locationId) {
+      showPage('client');
+      loadClientDetail(locationId);
+    }
+
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').classList.toggle('visible', show);
+    }
+
+    function showError(message) {
+      document.getElementById('errorText').textContent = message;
+      document.getElementById('errorMessage').classList.add('visible');
+    }
+
+    function hideError() {
+      document.getElementById('errorMessage').classList.remove('visible');
+    }
+
+    function showInfoModal() {
+      document.getElementById('infoModal').classList.add('visible');
+    }
+
+    function closeInfoModal() {
+      document.getElementById('infoModal').classList.remove('visible');
+    }
+
+    function refreshData() {
+      const btn = document.querySelector('.refresh-btn');
+      btn.classList.add('loading');
+      loadDashboardData().finally(() => btn.classList.remove('loading'));
+    }
+
+    function updateLastUpdated() {
+      const now = new Date();
+      document.getElementById('lastUpdated').textContent = `Last updated: ${now.toLocaleString('en-US', { 
+        month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+      })}`;
+    }
+
+    // ========================================
+    // FORMATTERS
+    // ========================================
+    function getRiskClass(risk) {
+      return { CRITICAL: 'critical', AT_RISK: 'at-risk', NEEDS_ATTENTION: 'attention', HEALTHY: 'healthy', EXCELLENT: 'healthy' }[risk] || 'healthy';
+    }
+
+    function getRiskIcon(risk) {
+      return { CRITICAL: '🔴', AT_RISK: '🟠', NEEDS_ATTENTION: '🟡', HEALTHY: '🟢', EXCELLENT: '🟢' }[risk] || '🟢';
+    }
+
+    function getHealthClass(score) {
+      if (score >= 70) return 'healthy';
+      if (score >= 50) return 'attention';
+      if (score >= 40) return 'at-risk';
+      return 'critical';
+    }
+
+    function getAdoptionClass(score) {
+      if (score >= 70) return 'healthy';
+      if (score >= 50) return 'attention';
+      if (score >= 40) return 'at-risk';
+      return 'critical';
+    }
+
+    function getAdoptionStatus(score) {
+      if (score >= 70) return 'HEALTHY';
+      if (score >= 50) return 'NEEDS ATTENTION';
+      if (score >= 40) return 'AT RISK';
+      return 'CRITICAL';
+    }
+
+    function getComponentClass(score) {
+      if (score >= 70) return 'healthy';
+      if (score >= 50) return 'attention';
+      if (score >= 40) return 'at-risk';
+      return 'critical';
+    }
+
+    function getTrendClass(trend) {
+      return { IMPROVING: 'up', DECLINING: 'down' }[trend] || 'stable';
+    }
+
+    function getTrendIcon(trend) {
+      return { IMPROVING: '↑', DECLINING: '↓' }[trend] || '→';
+    }
+
+    function getScoreColor(score) {
+      if (score >= 60) return 'green';
+      if (score >= 40) return 'yellow';
+      return 'red';
+    }
+
+    function getScoreColorValue(score) {
+      if (score >= 60) return 'var(--green)';
+      if (score >= 40) return 'var(--yellow)';
+      return 'var(--red)';
+    }
+
+    function getRepStatusClass(status) {
+      return { EXCELLENT: 'excellent', GOOD: 'good', FAIR: 'fair', NEEDS_COACHING: 'needs-coaching' }[status] || 'fair';
+    }
+
+    function formatRepStatus(status) {
+      return { EXCELLENT: 'Excellent', GOOD: 'Good', FAIR: 'Fair', NEEDS_COACHING: 'Needs Coaching' }[status] || status || 'Unknown';
+    }
+
+    function getQualityClass(level) {
+      if (level === 'complete') return 'complete';
+      if (level === 'partial') return 'partial';
+      if (level === 'incomplete') return 'incomplete';
+      return 'empty';
+    }
+
+    function formatDaysAgo(days) {
+      if (days === null || days === undefined) return 'No activity';
+      if (days === 0) return 'Today';
+      if (days === 1) return '1 day ago';
+      if (days < 7) return `${days} days ago`;
+      if (days < 14) return '1 week ago';
+      return `${Math.floor(days / 7)} weeks ago`;
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+    }
+
+    function formatDateTime(dateStr) {
+      if (!dateStr) return 'Not scheduled';
+      const date = new Date(dateStr);
+      return date.toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        year: 'numeric',
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      });
+    }
+
+    // ========================================
+    // EVENT LISTENERS
+    // ========================================
+    document.getElementById('infoModal').addEventListener('click', function(e) {
+      if (e.target === this) closeInfoModal();
+    });
+
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDashboardData();
+    });
+  </script>
+</body>
+</html>
