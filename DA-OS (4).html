@@ -2966,57 +2966,113 @@
               <span>📊</span>
               Pipeline Performance
             </div>
+            <div style="font-size: 10px; color: var(--gray-light);">
+              ${currentDateRange === 'all' ? 'All Time' : 'Note: Date filtering requires SQL update'}
+            </div>
           </div>
           <div class="section-card-body">
+            <!-- Lead Metrics Row -->
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;">
+              <div class="pipeline-stat-card" style="border-left: 3px solid var(--brand);">
+                <div class="pipeline-stat-value" style="color: var(--brand);">${pipeline.total_leads || 0}</div>
+                <div class="pipeline-stat-label">Total Leads</div>
+                <div class="pipeline-stat-sub">all lead types</div>
+              </div>
+              <div class="pipeline-stat-card" style="border-left: 3px solid var(--blue);">
+                <div class="pipeline-stat-value" style="color: var(--blue);">${pipeline.outbound_sent || 0}</div>
+                <div class="pipeline-stat-label">Internet Leads</div>
+                <div class="pipeline-stat-sub">with AI outbound</div>
+              </div>
+              <div class="pipeline-stat-card" style="border-left: 3px solid var(--green);">
+                <div class="pipeline-stat-value" style="color: var(--green);">${pipeline.avg_speed_to_lead_seconds || 0}s</div>
+                <div class="pipeline-stat-label">Speed to Lead</div>
+                <div class="pipeline-stat-sub">${pipeline.speed_sample_size || 0} leads measured</div>
+              </div>
+              <div class="pipeline-stat-card" style="border-left: 3px solid var(--purple, #a855f7);">
+                <div class="pipeline-stat-value" style="color: var(--purple, #a855f7);">${pipeline.avg_speed_to_lead_minutes || 0}</div>
+                <div class="pipeline-stat-label">Minutes Avg</div>
+                <div class="pipeline-stat-sub">response time</div>
+              </div>
+            </div>
+
+            <!-- Conversion Metrics Row -->
             <div class="pipeline-stats-grid">
               <div class="pipeline-stat-card">
                 <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${pipeline.reply_rate || 0}%</div>
                 <div class="pipeline-stat-label">Response Rate</div>
-                <div class="pipeline-stat-sub">${pipeline.total_responses || 0} replied</div>
+                <div class="pipeline-stat-sub">${pipeline.total_responses || pipeline.responded || 0} of ${pipeline.outbound_sent || 0} replied</div>
               </div>
               <div class="pipeline-stat-card">
                 <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}%</div>
                 <div class="pipeline-stat-label">Appointment Rate</div>
-                <div class="pipeline-stat-sub">${pipeline.appointments_booked || 0} booked</div>
+                <div class="pipeline-stat-sub">${pipeline.appointments_booked || pipeline.total_appointments || 0} booked from replies</div>
               </div>
               <div class="pipeline-stat-card">
                 <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</div>
-                <div class="pipeline-stat-label">Show Rate</div>
-                <div class="pipeline-stat-sub">on marked appts</div>
+                <div class="pipeline-stat-label">Show Rate *</div>
+                <div class="pipeline-stat-sub">* based on marked only</div>
               </div>
             </div>
-            <div class="appt-marking-box">
+
+            <!-- Appointment Breakdown -->
+            <div class="appt-marking-box" style="margin-top: 16px;">
               <div class="appt-marking-title">
-                <span>📋</span>
-                Appointment Marking
+                <span>📅</span>
+                Appointment Outcomes
               </div>
-              <div class="appt-marking-breakdown">
-                <div class="marking-row">
-                  <span class="marking-label">Past Appointments:</span>
-                  <span class="marking-value">${pipeline.past_appointments || 0}</span>
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px;">
+                <div style="text-align: center; padding: 10px; background: var(--dark); border-radius: 6px;">
+                  <div style="font-size: 20px; font-weight: 700; color: var(--white);">${pipeline.total_appointments || 0}</div>
+                  <div style="font-size: 9px; color: var(--gray-light); text-transform: uppercase;">Total Booked</div>
                 </div>
-                <div class="marking-row">
-                  <span class="marking-icon">✅</span>
-                  <span class="marking-label">Showed:</span>
-                  <span class="marking-value" style="color: var(--green);">${pipeline.showed || 0}</span>
+                <div style="text-align: center; padding: 10px; background: var(--dark); border-radius: 6px; border-left: 3px solid var(--green);">
+                  <div style="font-size: 20px; font-weight: 700; color: var(--green);">${pipeline.showed || 0}</div>
+                  <div style="font-size: 9px; color: var(--gray-light); text-transform: uppercase;">Showed</div>
                 </div>
-                <div class="marking-row">
-                  <span class="marking-icon">❌</span>
-                  <span class="marking-label">No-Show:</span>
-                  <span class="marking-value" style="color: var(--red);">${pipeline.no_shows || 0}</span>
+                <div style="text-align: center; padding: 10px; background: var(--dark); border-radius: 6px; border-left: 3px solid var(--red);">
+                  <div style="font-size: 20px; font-weight: 700; color: var(--red);">${pipeline.no_shows || 0}</div>
+                  <div style="font-size: 9px; color: var(--gray-light); text-transform: uppercase;">No-Shows</div>
                 </div>
-                <div class="marking-row">
-                  <span class="marking-icon">⚠️</span>
-                  <span class="marking-label">Unmarked:</span>
-                  <span class="marking-value" style="color: var(--orange);">${pipeline.unmarked_appointments || 0}</span>
+                <div style="text-align: center; padding: 10px; background: var(--dark); border-radius: 6px; border-left: 3px solid var(--orange);">
+                  <div style="font-size: 20px; font-weight: 700; color: var(--orange);">${pipeline.unmarked_appointments || 0}</div>
+                  <div style="font-size: 9px; color: var(--gray-light); text-transform: uppercase;">Unmarked</div>
                 </div>
               </div>
+
+              <div style="background: var(--dark); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 11px; color: var(--gray-text);">Marking Rate:</span>
+                  <span style="font-size: 13px; font-weight: 700; color: ${getScoreColorValue(pipeline.marking_rate)};">${pipeline.marking_rate || 0}%</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <span style="font-size: 11px; color: var(--gray-text);">Show Rate (of marked):</span>
+                  <span style="font-size: 13px; font-weight: 700; color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</span>
+                </div>
+              </div>
+
               ${pipeline.unmarked_appointments > 0 ? `
-              <div class="marking-warning">
-                <span class="warning-icon">⚠️</span>
-                <div class="warning-text"><strong>${pipeline.unmarked_appointments} appointments need outcomes recorded.</strong></div>
+              <div class="marking-warning" style="background: rgba(234, 179, 8, 0.1); border: 1px solid var(--orange); border-radius: 6px; padding: 10px 12px;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                  <span style="font-size: 16px;">⚠️</span>
+                  <div>
+                    <div style="font-size: 12px; font-weight: 600; color: var(--orange); margin-bottom: 4px;">
+                      ${pipeline.unmarked_appointments} appointments need outcomes recorded
+                    </div>
+                    <div style="font-size: 11px; color: var(--gray-text);">
+                      Show rate is calculated only from marked appointments (${pipeline.showed || 0} showed + ${pipeline.no_shows || 0} no-shows = ${(pipeline.showed || 0) + (pipeline.no_shows || 0)} marked).
+                      Unmarked appointments are not included in the show rate calculation.
+                    </div>
+                  </div>
+                </div>
               </div>
-              ` : ''}
+              ` : `
+              <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid var(--green); border-radius: 6px; padding: 10px 12px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 16px;">✅</span>
+                  <div style="font-size: 12px; color: var(--green);">All appointment outcomes are recorded</div>
+                </div>
+              </div>
+              `}
             </div>
           </div>
         </div>
