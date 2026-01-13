@@ -706,8 +706,9 @@ Rep instructs AI to stop working a lead.
 | Lead Created | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-lead-webhook` |
 | Outbound Sent | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-outbound-webhook` |
 | Response Received | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-response-webhook` |
-| Appointment Outcome | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-webhook` |
-| **Appointment Created** | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-created` |
+| **Appointment (Unified)** | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-webhook` |
+
+> **Note:** The Appointment webhook handles BOTH new bookings (status="confirmed") AND status updates (showed/no_show/cancelled). Set up TWO GHL triggers pointing to this same endpoint.
 
 ### Required GHL Headers
 
@@ -761,29 +762,37 @@ Content-Type: application/json
 | `responded` | `true` |
 | `time_to_response_minutes` | Calculated |
 
-### Webhook 4: Appointment Created (NEW)
+### Webhook 4: Appointment (Unified - NEW BOOKINGS + STATUS UPDATES)
 
-**Trigger:** GHL "Appointment Created" (any source)
-**RPC:** `upsert_appointment_from_webhook(payload JSONB)`
+**Triggers:**
+- GHL "Appointment Created" → New bookings
+- GHL "Appointment Status Changed" → Outcome updates
 
-**Table:** `appointments` (UPSERT with passive logic)
+**Endpoint:** `ghl-appointment-webhook` (single endpoint handles both)
 
-**Purpose:** Captures manually-created appointments in GHL calendar that bypass n8n workflows.
+**Logic:**
+```
+IF status = "confirmed" AND appointment doesn't exist:
+    → INSERT with created_source = 'rep_manual'
+    → If n8n already inserted, skip (defers to authoritative source)
 
-**UPSERT Logic:**
-- If appointment exists (from n8n) → **DO NOTHING** (respects authoritative source)
-- If appointment is new → **INSERT with `created_source = 'rep_manual'`**
+IF appointment exists:
+    → UPDATE outcome_status (showed, no_show, cancelled)
+```
 
-| Column | Source |
-|--------|--------|
-| `ghl_appointment_id` | GHL appointment ID |
-| `location_id` | GHL location ID |
-| `contact_id` | GHL contact ID |
-| `assigned_rep_id` | Assigned user ID |
-| `assigned_rep_name` | Assigned user name |
-| `appointment_time` | Start time |
-| `created_source` | `'rep_manual'` (for new appointments) |
-| `source_workflow` | `'ghl_calendar'` |
+**Deduplication:**
+| Source | Strategy | Authority |
+|--------|----------|-----------|
+| n8n (Drive AI / Reactivate) | ON CONFLICT DO UPDATE | **Authoritative** (always wins) |
+| GHL Webhook | Check exists first | **Passive** (defers to n8n) |
+
+**Status Mapping:**
+| GHL Status | Action |
+|------------|--------|
+| `confirmed` | Insert new (if not exists) |
+| `showed`, `completed` | Update → `showed` |
+| `no_show`, `no-show` | Update → `no_show` |
+| `cancelled`, `canceled` | Update → `cancelled` |
 
 **created_source Values:**
 | Value | Source | Counts As |
