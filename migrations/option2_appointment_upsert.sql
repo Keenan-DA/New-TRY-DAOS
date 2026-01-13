@@ -37,6 +37,22 @@ END $$;
 -- This function is called by Drive AI 7.0 and Reactivate Drive workflows
 -- It uses ON CONFLICT DO UPDATE to OVERRIDE if webhook inserted first
 
+-- First, drop ALL existing versions of insert_appointment function
+DO $$
+DECLARE
+    func_oid oid;
+BEGIN
+    FOR func_oid IN
+        SELECT p.oid
+        FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE p.proname = 'insert_appointment'
+        AND n.nspname = 'public'
+    LOOP
+        EXECUTE 'DROP FUNCTION IF EXISTS ' || func_oid::regprocedure || ' CASCADE';
+    END LOOP;
+END $$;
+
 CREATE OR REPLACE FUNCTION insert_appointment(
     p_ghl_appointment_id TEXT,
     p_trace_id TEXT DEFAULT NULL,
