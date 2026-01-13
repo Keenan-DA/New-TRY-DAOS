@@ -1,0 +1,33 @@
+# Data files
+data/*.csv
+data/*.json
+data/*.xlsx
+!data/.gitkeep
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# Node
+node_modules/
+npm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+logs/
+*.log
+
+# Temporary files
+*.tmp
+*.temp
