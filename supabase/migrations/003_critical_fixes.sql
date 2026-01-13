@@ -71,8 +71,30 @@ END $$;
 -- ============================================================================
 
 -- appointments.outcome_status
+-- First normalize any invalid values, then add constraint
 DO $$
+DECLARE
+    invalid_count INTEGER;
 BEGIN
+    -- Check for invalid values
+    SELECT COUNT(*) INTO invalid_count
+    FROM appointments
+    WHERE outcome_status IS NULL
+       OR outcome_status NOT IN ('pending', 'showed', 'no_show', 'cancelled');
+
+    IF invalid_count > 0 THEN
+        RAISE NOTICE 'Found % appointments with invalid outcome_status, normalizing...', invalid_count;
+
+        -- Normalize NULL or invalid values to 'pending'
+        UPDATE appointments
+        SET outcome_status = 'pending'
+        WHERE outcome_status IS NULL
+           OR outcome_status NOT IN ('pending', 'showed', 'no_show', 'cancelled');
+
+        RAISE NOTICE 'Normalized % outcome_status values to pending', invalid_count;
+    END IF;
+
+    -- Now add the constraint
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'chk_appointments_outcome_status'
@@ -100,8 +122,30 @@ BEGIN
 END $$;
 
 -- leads.status
+-- First normalize any invalid values, then add constraint
 DO $$
+DECLARE
+    invalid_count INTEGER;
 BEGIN
+    -- Check for invalid values
+    SELECT COUNT(*) INTO invalid_count
+    FROM leads
+    WHERE status IS NULL
+       OR status NOT IN ('active', 'converted', 'removed');
+
+    IF invalid_count > 0 THEN
+        RAISE NOTICE 'Found % leads with invalid status values, normalizing...', invalid_count;
+
+        -- Normalize NULL or invalid values to 'active'
+        UPDATE leads
+        SET status = 'active'
+        WHERE status IS NULL
+           OR status NOT IN ('active', 'converted', 'removed');
+
+        RAISE NOTICE 'Normalized % status values to active', invalid_count;
+    END IF;
+
+    -- Now add the constraint
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'chk_leads_status'
@@ -114,8 +158,30 @@ BEGIN
 END $$;
 
 -- leads.lead_type
+-- First normalize any invalid values, then add constraint
 DO $$
+DECLARE
+    invalid_count INTEGER;
 BEGIN
+    -- Check for invalid values
+    SELECT COUNT(*) INTO invalid_count
+    FROM leads
+    WHERE lead_type IS NULL
+       OR lead_type NOT IN ('new_inbound', 'aged_upload', 'rep_created', 'service');
+
+    IF invalid_count > 0 THEN
+        RAISE NOTICE 'Found % leads with invalid lead_type values, normalizing...', invalid_count;
+
+        -- Normalize NULL or invalid values to 'new_inbound'
+        UPDATE leads
+        SET lead_type = 'new_inbound'
+        WHERE lead_type IS NULL
+           OR lead_type NOT IN ('new_inbound', 'aged_upload', 'rep_created', 'service');
+
+        RAISE NOTICE 'Normalized % lead_type values to new_inbound', invalid_count;
+    END IF;
+
+    -- Now add the constraint
     IF NOT EXISTS (
         SELECT 1 FROM pg_constraint
         WHERE conname = 'chk_leads_lead_type'
