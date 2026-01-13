@@ -326,6 +326,11 @@ Returns action_taken: skipped_existing or inserted_new.';
 -- STEP 4: Update views to include 'rep_manual' in human counts
 -- ============================================================================
 
+-- Drop existing views first (required when changing columns)
+DROP VIEW IF EXISTS v_appointment_stats CASCADE;
+DROP VIEW IF EXISTS v_ai_human_ratio CASCADE;
+DROP VIEW IF EXISTS v_rep_appointment_breakdown CASCADE;
+
 -- v_appointment_stats: Add rep_manual to human counts
 CREATE OR REPLACE VIEW v_appointment_stats AS
 SELECT
