@@ -1959,25 +1959,26 @@
     <div class="date-picker-container">
       <button class="date-picker-btn" onclick="toggleDatePicker()">
         <span class="date-picker-icon">📅</span>
-        <span id="dateRangeLabel">Last 30 Days</span>
+        <span id="dateRangeLabel">All Time</span>
         <span>▼</span>
       </button>
       <div class="date-picker-dropdown" id="datePickerDropdown">
         <div class="date-preset-grid">
           <button class="date-preset-btn" onclick="setDateRange('mtd', event)">Month to Date</button>
           <button class="date-preset-btn" onclick="setDateRange('l7d', event)">Last 7 Days</button>
-          <button class="date-preset-btn active" onclick="setDateRange('l30d', event)">Last 30 Days</button>
+          <button class="date-preset-btn" onclick="setDateRange('l30d', event)">Last 30 Days</button>
           <button class="date-preset-btn" onclick="setDateRange('l90d', event)">Last 90 Days</button>
           <button class="date-preset-btn" onclick="setDateRange('ytd', event)">Year to Date</button>
-          <button class="date-preset-btn" onclick="setDateRange('all', event)">All Time</button>
+          <button class="date-preset-btn active" onclick="setDateRange('all', event)">All Time</button>
         </div>
         <div class="date-custom-section">
           <div class="date-custom-label">Custom Range</div>
           <div class="date-custom-inputs">
             <input type="date" class="date-custom-input" id="startDate">
+            <span style="color: var(--gray-light);">to</span>
             <input type="date" class="date-custom-input" id="endDate">
           </div>
-          <button class="date-preset-btn" style="width: 100%; margin-top: 8px; background: var(--brand); color: var(--black); border-color: var(--brand);" onclick="applyCustomDateRange()">Apply Custom Range</button>
+          <button class="date-preset-btn" style="width: 100%; margin-top: 10px; background: var(--brand); color: var(--black); border-color: var(--brand); font-weight: 700;" onclick="applyCustomDateRange()">Apply Custom Range</button>
         </div>
       </div>
     </div>
@@ -2185,12 +2186,13 @@
     let filteredAccounts = [];
     let selectedAccount = null;
     let currentRiskFilter = null;
-    let currentDateRange = 'l30d';
+    let currentDateRange = 'all'; // Default to All Time
     let currentActionFilter = 'all';
     let currentRepFilter = 'all';
     let currentLogSort = 'newest';
     let currentInstructionLog = [];
     let currentReps = [];
+    let instructionLogDisplayCount = 5; // Pagination: show 5 initially
 
     // ========================================
     // API FUNCTIONS
@@ -3088,25 +3090,37 @@
     }
 
     function renderInstructionLogEntries(logs) {
+      // Apply date range filter for instruction logs
+      let filteredLogs = [...logs];
+      const dateRange = getDateRangeFilter();
+      if (dateRange) {
+        const startDate = new Date(dateRange.start);
+        const endDate = new Date(dateRange.end);
+        filteredLogs = filteredLogs.filter(l => {
+          const logDate = new Date(l.reactivated_at || l.created_at);
+          return logDate >= startDate && logDate <= endDate;
+        });
+      }
+
       // Apply action filter
-      let filteredLogs = currentActionFilter === 'all' 
-        ? logs 
-        : logs.filter(l => l.action === currentActionFilter);
-      
+      if (currentActionFilter !== 'all') {
+        filteredLogs = filteredLogs.filter(l => l.action === currentActionFilter);
+      }
+
       // Apply rep filter
       if (currentRepFilter !== 'all') {
-        filteredLogs = filteredLogs.filter(l => 
+        filteredLogs = filteredLogs.filter(l =>
           (l.assigned_rep_name || l.rep_name) === currentRepFilter
         );
       }
-      
+
       // Apply sorting
-      filteredLogs = [...filteredLogs].sort((a, b) => {
+      filteredLogs = filteredLogs.sort((a, b) => {
         const dateA = new Date(a.reactivated_at || a.created_at);
         const dateB = new Date(b.reactivated_at || b.created_at);
         const repA = (a.assigned_rep_name || a.rep_name || '').toLowerCase();
         const repB = (b.assigned_rep_name || b.rep_name || '').toLowerCase();
-        
+
         switch (currentLogSort) {
           case 'oldest': return dateA - dateB;
           case 'rep_asc': return repA.localeCompare(repB);
@@ -3125,7 +3139,12 @@
         `;
       }
 
-      return filteredLogs.map(log => {
+      // Pagination: show only instructionLogDisplayCount items
+      const totalLogs = filteredLogs.length;
+      const displayLogs = filteredLogs.slice(0, instructionLogDisplayCount);
+      const hasMore = totalLogs > instructionLogDisplayCount;
+
+      const entriesHtml = displayLogs.map(log => {
         const action = log.action || 'follow_up';
         const actionClass = action.replace('_', '-');
         
@@ -3205,10 +3224,51 @@
           </div>
         `;
       }).join('');
+
+      // Add "Show More" / "Show Less" buttons if needed
+      const remaining = totalLogs - instructionLogDisplayCount;
+      let paginationHtml = '';
+
+      if (hasMore || instructionLogDisplayCount > 5) {
+        paginationHtml = `
+          <div class="log-pagination" style="display: flex; justify-content: center; gap: 12px; margin-top: 16px; padding: 12px;">
+            ${instructionLogDisplayCount > 5 ? `
+              <button onclick="showFewerLogs()" style="padding: 8px 16px; background: var(--dark-2); border: 1px solid var(--gray-dark); border-radius: 6px; color: var(--gray-text); font-size: 12px; cursor: pointer; font-family: inherit;">
+                Show Less
+              </button>
+            ` : ''}
+            ${hasMore ? `
+              <button onclick="showMoreLogs()" style="padding: 8px 16px; background: var(--brand); border: none; border-radius: 6px; color: var(--black); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit;">
+                Show More (${remaining} remaining)
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }
+
+      // Add count indicator
+      const countHtml = `
+        <div style="text-align: center; font-size: 11px; color: var(--gray-light); margin-bottom: 12px;">
+          Showing ${displayLogs.length} of ${totalLogs} instructions
+        </div>
+      `;
+
+      return countHtml + entriesHtml + paginationHtml;
+    }
+
+    function showMoreLogs() {
+      instructionLogDisplayCount += 10;
+      document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
+    }
+
+    function showFewerLogs() {
+      instructionLogDisplayCount = 5;
+      document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
     }
 
     function filterByRep(rep) {
       currentRepFilter = rep;
+      instructionLogDisplayCount = 5; // Reset pagination on filter change
       document.getElementById('instructionLogEntries').innerHTML = renderInstructionLogEntries(currentInstructionLog);
     }
 
@@ -3219,6 +3279,7 @@
 
     function filterInstructionLog(filter) {
       currentActionFilter = filter;
+      instructionLogDisplayCount = 5; // Reset pagination on filter change
       document.querySelectorAll('.action-filter-chip').forEach(chip => chip.classList.remove('active'));
       const targetClass = filter === 'all' ? 'all' : filter.replace('_', '-');
       document.querySelector(`.action-filter-chip.${targetClass}`).classList.add('active');
@@ -3415,7 +3476,27 @@
     function refreshData() {
       const btn = document.querySelector('.refresh-btn');
       btn.classList.add('loading');
-      loadDashboardData().finally(() => btn.classList.remove('loading'));
+
+      // Check which page we're on and refresh appropriately
+      const clientPage = document.getElementById('page-client');
+      const isClientDetailPage = clientPage && clientPage.classList.contains('active');
+
+      if (isClientDetailPage && selectedAccount) {
+        // On client detail page - reload client data
+        loadClientDetail(selectedAccount.location_id).finally(() => btn.classList.remove('loading'));
+      } else {
+        // On portfolio page - reload dashboard
+        loadDashboardData().finally(() => btn.classList.remove('loading'));
+      }
+
+      // Also re-render instruction log with new date filter if we have data
+      if (currentInstructionLog.length > 0) {
+        instructionLogDisplayCount = 5; // Reset pagination
+        const logContainer = document.getElementById('instructionLogEntries');
+        if (logContainer) {
+          logContainer.innerHTML = renderInstructionLogEntries(currentInstructionLog);
+        }
+      }
     }
 
     function updateLastUpdated() {
@@ -3516,14 +3597,33 @@
     function formatDateTime(dateStr) {
       if (!dateStr) return 'Not scheduled';
       const date = new Date(dateStr);
-      return date.toLocaleString('en-US', { 
-        month: 'short', 
-        day: 'numeric', 
+      // Note: Times in database appear to be stored as local times in UTC format
+      // This displays them in the user's local timezone which should match intent
+      return date.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
         year: 'numeric',
-        hour: 'numeric', 
-        minute: '2-digit', 
-        hour12: true 
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
       });
+    }
+
+    // Format time showing the raw UTC value (for debugging/display when data is stored incorrectly)
+    function formatTimeAsEntered(dateStr) {
+      if (!dateStr) return 'Not scheduled';
+      // Extract time portion from ISO string and display as-is
+      // This is useful when times were stored as local times in UTC format
+      const match = dateStr.match(/T(\d{2}):(\d{2})/);
+      if (match) {
+        let hour = parseInt(match[1], 10);
+        const minute = match[2];
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12 || 12;
+        return `${hour}:${minute} ${ampm}`;
+      }
+      return formatDateTime(dateStr);
     }
 
     // ========================================
