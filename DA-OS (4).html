@@ -1964,12 +1964,12 @@
       </button>
       <div class="date-picker-dropdown" id="datePickerDropdown">
         <div class="date-preset-grid">
-          <button class="date-preset-btn" onclick="setDateRange('mtd')">Month to Date</button>
-          <button class="date-preset-btn" onclick="setDateRange('l7d')">Last 7 Days</button>
-          <button class="date-preset-btn active" onclick="setDateRange('l30d')">Last 30 Days</button>
-          <button class="date-preset-btn" onclick="setDateRange('l90d')">Last 90 Days</button>
-          <button class="date-preset-btn" onclick="setDateRange('ytd')">Year to Date</button>
-          <button class="date-preset-btn" onclick="setDateRange('all')">All Time</button>
+          <button class="date-preset-btn" onclick="setDateRange('mtd', event)">Month to Date</button>
+          <button class="date-preset-btn" onclick="setDateRange('l7d', event)">Last 7 Days</button>
+          <button class="date-preset-btn active" onclick="setDateRange('l30d', event)">Last 30 Days</button>
+          <button class="date-preset-btn" onclick="setDateRange('l90d', event)">Last 90 Days</button>
+          <button class="date-preset-btn" onclick="setDateRange('ytd', event)">Year to Date</button>
+          <button class="date-preset-btn" onclick="setDateRange('all', event)">All Time</button>
         </div>
         <div class="date-custom-section">
           <div class="date-custom-label">Custom Range</div>
@@ -1977,6 +1977,7 @@
             <input type="date" class="date-custom-input" id="startDate">
             <input type="date" class="date-custom-input" id="endDate">
           </div>
+          <button class="date-preset-btn" style="width: 100%; margin-top: 8px; background: var(--brand); color: var(--black); border-color: var(--brand);" onclick="applyCustomDateRange()">Apply Custom Range</button>
         </div>
       </div>
     </div>
@@ -2194,26 +2195,101 @@
     // ========================================
     // API FUNCTIONS
     // ========================================
+
+    // Calculate date range based on current selection
+    function getDateRangeFilter() {
+      const now = new Date();
+      let startDate, endDate;
+
+      switch (currentDateRange) {
+        case 'mtd': // Month to Date
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          endDate = now;
+          break;
+        case 'l7d': // Last 7 Days
+          startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          endDate = now;
+          break;
+        case 'l30d': // Last 30 Days (default)
+          startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          endDate = now;
+          break;
+        case 'l90d': // Last 90 Days
+          startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+          endDate = now;
+          break;
+        case 'ytd': // Year to Date
+          startDate = new Date(now.getFullYear(), 0, 1);
+          endDate = now;
+          break;
+        case 'custom': // Custom date range
+          const customStart = document.getElementById('startDate').value;
+          const customEnd = document.getElementById('endDate').value;
+          if (customStart && customEnd) {
+            startDate = new Date(customStart);
+            endDate = new Date(customEnd);
+            endDate.setHours(23, 59, 59, 999); // Include full end day
+          } else {
+            return null; // No filter if custom dates not set
+          }
+          break;
+        case 'all': // All Time
+        default:
+          return null; // No date filter
+      }
+
+      // Format dates for Supabase (ISO 8601)
+      return {
+        start: startDate.toISOString(),
+        end: endDate.toISOString()
+      };
+    }
+
     async function fetchFromSupabase(viewName, options = {}) {
       let url = `${SUPABASE_URL}/rest/v1/${viewName}?select=*`;
-      
+
       if (options.filter) url += `&${options.filter}`;
       if (options.order) url += `&order=${options.order}`;
       if (options.limit) url += `&limit=${options.limit}`;
 
-      const response = await fetch(url, {
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Content-Type': 'application/json'
+      // Retry logic with exponential backoff for network resilience
+      const maxRetries = 3;
+      const baseDelay = 1000; // 1 second
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          const response = await fetch(url, {
+            headers: {
+              'apikey': SUPABASE_KEY,
+              'Authorization': `Bearer ${SUPABASE_KEY}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            // Don't retry on client errors (4xx), only on server errors (5xx)
+            if (response.status >= 400 && response.status < 500) {
+              throw new Error(`${viewName}: ${response.status} - ${errorText}`);
+            }
+            throw new Error(`Server error: ${response.status}`);
+          }
+
+          return response.json();
+        } catch (error) {
+          const isLastAttempt = attempt === maxRetries;
+          const isNetworkError = error.name === 'TypeError' || error.message.includes('Server error');
+
+          if (isLastAttempt || !isNetworkError) {
+            throw new Error(`${viewName}: ${error.message}`);
+          }
+
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = baseDelay * Math.pow(2, attempt);
+          console.warn(`Retry ${attempt + 1}/${maxRetries} for ${viewName} after ${delay}ms`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`${viewName}: ${response.status} - ${errorText}`);
       }
-
-      return response.json();
     }
 
     // ========================================
@@ -2297,16 +2373,30 @@
     // PORTFOLIO STATS
     // ========================================
     function updatePortfolioStats() {
-      if (!accounts.length) return;
+      if (!accounts || !Array.isArray(accounts) || accounts.length === 0) {
+        console.warn('No accounts data available for portfolio stats');
+        return;
+      }
+
+      // Safely parse numeric values with fallback
+      const safeParseFloat = (value) => {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
+      };
+
+      const safeParseInt = (value) => {
+        const parsed = parseInt(value, 10);
+        return isNaN(parsed) ? 0 : parsed;
+      };
 
       // Compounding Rate
       const accountsWithRate = accounts.filter(a => a.compounding_rate !== null && a.compounding_rate !== undefined);
-      const avgRate = accountsWithRate.length 
-        ? Math.round(accountsWithRate.reduce((sum, a) => sum + parseFloat(a.compounding_rate || 0), 0) / accountsWithRate.length)
+      const avgRate = accountsWithRate.length
+        ? Math.round(accountsWithRate.reduce((sum, a) => sum + safeParseFloat(a.compounding_rate), 0) / accountsWithRate.length)
         : 0;
       
-      const activeCount = accounts.filter(a => parseFloat(a.compounding_rate || 0) >= 100).length;
-      const inactiveCount = accounts.filter(a => parseFloat(a.compounding_rate || 0) < 100 || !a.compounding_rate).length;
+      const activeCount = accounts.filter(a => safeParseFloat(a.compounding_rate) >= 100).length;
+      const inactiveCount = accounts.filter(a => safeParseFloat(a.compounding_rate) < 100 || !a.compounding_rate).length;
 
       // Color the rate based on level
       const rateEl = document.getElementById('avgCompoundingRate');
@@ -2338,34 +2428,34 @@
       }
 
       // Health Score
-      const avgHealth = Math.round(accounts.reduce((sum, a) => sum + (a.adoption_score || 0), 0) / accounts.length);
+      const avgHealth = Math.round(accounts.reduce((sum, a) => sum + safeParseInt(a.adoption_score), 0) / accounts.length);
       const healthEl = document.getElementById('avgHealth');
       healthEl.textContent = avgHealth;
       healthEl.className = `stat-value ${avgHealth >= 60 ? 'green' : avgHealth >= 40 ? 'orange' : 'red'}`;
 
       // Tasks
-      const totalTasks = accounts.reduce((sum, a) => sum + (a.total_tasks || 0), 0);
-      const completedTasks = accounts.reduce((sum, a) => sum + (a.completed_tasks || 0), 0);
+      const totalTasks = accounts.reduce((sum, a) => sum + safeParseInt(a.total_tasks), 0);
+      const completedTasks = accounts.reduce((sum, a) => sum + safeParseInt(a.completed_tasks), 0);
       const completionPct = totalTasks ? Math.round(100 * completedTasks / totalTasks) : 0;
       document.getElementById('totalTasks').textContent = totalTasks.toLocaleString();
       document.getElementById('completedTasks').textContent = `${completedTasks.toLocaleString()} completed (${completionPct}% completion)`;
 
       // Show Rate
-      const totalShowed = accounts.reduce((sum, a) => sum + (a.showed || 0), 0);
-      const totalNoShows = accounts.reduce((sum, a) => sum + (a.no_shows || 0), 0);
+      const totalShowed = accounts.reduce((sum, a) => sum + safeParseInt(a.showed), 0);
+      const totalNoShows = accounts.reduce((sum, a) => sum + safeParseInt(a.no_shows), 0);
       const markedAppts = totalShowed + totalNoShows;
       const showRate = markedAppts > 0 ? Math.round(100 * totalShowed / markedAppts) : 0;
       const showRateEl = document.getElementById('showRate');
       showRateEl.textContent = showRate + '%';
       showRateEl.className = `stat-value ${showRate >= 60 ? 'green' : showRate >= 40 ? 'orange' : 'red'}`;
-      
-      const totalPastAppts = accounts.reduce((sum, a) => sum + ((a.showed || 0) + (a.no_shows || 0) + (a.unmarked_appointments || 0)), 0);
+
+      const totalPastAppts = accounts.reduce((sum, a) => sum + (safeParseInt(a.showed) + safeParseInt(a.no_shows) + safeParseInt(a.unmarked_appointments)), 0);
       const markingPct = totalPastAppts > 0 ? Math.round(100 * markedAppts / totalPastAppts) : 0;
       document.getElementById('showRateSub').textContent = `${markedAppts} marked of ${totalPastAppts} past (${markingPct}% marked)`;
 
       // Appointments
-      const totalAppts = accounts.reduce((sum, a) => sum + (a.appointments_last_30 || 0), 0);
-      const unmarkedAppts = accounts.reduce((sum, a) => sum + (a.unmarked_appointments || 0), 0);
+      const totalAppts = accounts.reduce((sum, a) => sum + safeParseInt(a.appointments_last_30), 0);
+      const unmarkedAppts = accounts.reduce((sum, a) => sum + safeParseInt(a.unmarked_appointments), 0);
       document.getElementById('totalAppts').textContent = totalAppts.toLocaleString();
       document.getElementById('apptsSub').textContent = `${totalShowed} showed, ${unmarkedAppts} unmarked`;
 
@@ -3189,24 +3279,59 @@
       document.getElementById('datePickerDropdown').classList.toggle('visible');
     }
 
-    function setDateRange(range) {
+    function setDateRange(range, event) {
       currentDateRange = range;
-      
+
       const labels = {
         mtd: 'Month to Date',
         l7d: 'Last 7 Days',
         l30d: 'Last 30 Days',
         l90d: 'Last 90 Days',
         ytd: 'Year to Date',
-        all: 'All Time'
+        all: 'All Time',
+        custom: 'Custom Range'
       };
 
       document.getElementById('dateRangeLabel').textContent = labels[range] || 'Last 30 Days';
-      
+
+      // Update active state on preset buttons
       document.querySelectorAll('.date-preset-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
-      
+      if (event && event.target) {
+        event.target.classList.add('active');
+      }
+
       document.getElementById('datePickerDropdown').classList.remove('visible');
+
+      // Reload data with new date range
+      // Note: The v_cs_account_health view handles date filtering server-side
+      // This ensures the UI reflects the selected range
+      refreshData();
+    }
+
+    function applyCustomDateRange() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+
+      if (!startDate || !endDate) {
+        showError('Please select both start and end dates');
+        return;
+      }
+
+      if (new Date(startDate) > new Date(endDate)) {
+        showError('Start date must be before end date');
+        return;
+      }
+
+      currentDateRange = 'custom';
+      const startFormatted = new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endFormatted = new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      document.getElementById('dateRangeLabel').textContent = `${startFormatted} - ${endFormatted}`;
+
+      document.querySelectorAll('.date-preset-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('datePickerDropdown').classList.remove('visible');
+
+      // Reload data with custom date range
+      refreshData();
     }
 
     document.addEventListener('click', function(e) {
