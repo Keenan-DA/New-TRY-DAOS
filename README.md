@@ -2,6 +2,14 @@
 
 A comprehensive data platform for tracking AI-assisted automotive dealership operations, measuring performance metrics, and providing actionable insights for Customer Success teams.
 
+## New Developer? Start Here
+
+1. Read the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** - Setup, workflows, and common tasks
+2. Review the **[Data Dictionary](docs/DATA_DICTIONARY.md)** - All data fields and formulas
+3. Explore the **[Architecture](docs/ARCHITECTURE.md)** - System design and data flows
+
+---
+
 ## Overview
 
 DA-OS integrates with:
@@ -45,41 +53,66 @@ DA-OS integrates with:
 - Rep performance breakdowns
 - Lost opportunity estimation
 
+---
+
 ## Project Structure
 
 ```
 DA-OS/
-├── docs/                          # Documentation
-│   ├── ARCHITECTURE.md            # Data flow & system design
-│   ├── SCHEMA.md                  # Database schema reference
-│   ├── DASHBOARD_BLUEPRINT.md     # CS Dashboard specifications
-│   ├── WEBHOOKS.md                # Webhook setup guide
-│   └── diagrams/                  # Visual diagrams
+├── README.md                         # This file
+├── .gitignore                        # Ignored files
+│
+├── docs/                             # Documentation
+│   ├── DEVELOPER_GUIDE.md            # 🚀 START HERE - Developer onboarding
+│   ├── DATA_DICTIONARY.md            # All data fields & formulas
+│   ├── ARCHITECTURE.md               # Data flow & system design
+│   ├── SCHEMA.md                     # Complete database schema
+│   ├── DASHBOARD_BLUEPRINT.md        # CS Dashboard specifications
+│   ├── WEBHOOKS.md                   # Webhook setup guide
+│   └── diagrams/
+│       └── data-flow.html            # Visual architecture diagram
 │
 ├── supabase/
-│   ├── migrations/                # SQL migrations
-│   │   └── 002_appointment_upsert.sql
-│   └── functions/                 # Edge functions
+│   ├── migrations/                   # SQL migrations (run in order)
+│   │   ├── 002_appointment_upsert.sql
+│   │   └── 003_critical_fixes.sql
+│   └── functions/                    # Edge functions
 │       └── ghl-appointment-webhook/
+│           └── index.ts
 │
-└── data/                          # Local data (gitignored)
+└── data/                             # Local data (gitignored)
 ```
+
+---
 
 ## Quick Start
 
-### 1. Run Migrations
-```sql
--- Run in Supabase SQL Editor
--- See supabase/migrations/ for files
+### 1. Run Migrations (in order)
+
+```bash
+# In Supabase SQL Editor, run:
+supabase/migrations/002_appointment_upsert.sql
+supabase/migrations/003_critical_fixes.sql
 ```
 
 ### 2. Deploy Edge Functions
+
 ```bash
 supabase functions deploy ghl-appointment-webhook
 ```
 
 ### 3. Configure GHL Webhooks
-See [docs/WEBHOOKS.md](docs/WEBHOOKS.md) for setup instructions.
+
+Set up TWO webhooks pointing to the same endpoint:
+
+| Trigger | URL |
+|---------|-----|
+| Appointment Created | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-webhook` |
+| Appointment Status Changed | `https://gamwimamcvgakcetdypm.supabase.co/functions/v1/ghl-appointment-webhook` |
+
+See [docs/WEBHOOKS.md](docs/WEBHOOKS.md) for full setup instructions.
+
+---
 
 ## Appointment Source Attribution
 
@@ -89,34 +122,87 @@ See [docs/WEBHOOKS.md](docs/WEBHOOKS.md) for setup instructions.
 | Reactivate Drive | `rep_instructed` | Human |
 | GHL Calendar (manual) | `rep_manual` | Human |
 
+**Deduplication Logic:**
+- n8n workflows use `ON CONFLICT DO UPDATE` (authoritative)
+- GHL webhook checks existence first (passive)
+- Result: No duplicates, correct attribution
+
+---
+
+## Key Formulas
+
+| Metric | Formula |
+|--------|---------|
+| **Speed to Lead** | `first_outbound_at - lead_date` (seconds) |
+| **Closed Loop %** | `completed / (completed + overdue) × 100` |
+| **Show Rate** | `showed / (showed + no_show) × 100` |
+| **AI/Human Ratio** | `ai_booked / (rep_instructed + rep_manual)` |
+| **Health Score** | `(loop × 0.4) + (clarity × 0.3) + (marking × 0.3)` |
+
+See [docs/DATA_DICTIONARY.md](docs/DATA_DICTIONARY.md) for complete formula reference.
+
+---
+
 ## Key Tables
 
-| Table | Purpose |
-|-------|---------|
-| `leads` | All contacts with lead type classification |
-| `tasks` | AI-generated follow-up tasks |
-| `appointments` | Booked appointments with source tracking |
-| `reactivations` | Rep-instructed actions |
-| `ai_decisions` | AI decision audit log |
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `leads` | All contacts | `contact_id`, `location_id`, `speed_to_lead_seconds` |
+| `tasks` | AI-created follow-ups | `task_id`, `completed`, `due_date` |
+| `appointments` | Booked appointments | `created_source`, `outcome_status` |
+| `reactivations` | Rep instructions | `action`, `instruction` |
+| `ai_decisions` | AI decision audit log | `action`, `confidence` |
 
 ## Key Views
 
-| View | Purpose |
-|------|---------|
-| `v_dealerships` | Dealership reference data |
-| `v_appointment_stats` | Appointment metrics by dealership |
-| `v_ai_human_ratio` | AI vs human booking balance |
-| `v_rep_appointment_breakdown` | Per-rep appointment metrics |
-| `v_lost_opportunity` | Estimated missed appointments |
+| View | Purpose | Key Metrics |
+|------|---------|-------------|
+| `v_appointment_stats` | Appointment metrics | `show_rate`, `ai_booked`, `human_booked` |
+| `v_loop_closure_stats` | Task completion | `closed_loop_pct` |
+| `v_health_score` | Adoption score | `adoption_score` (0-100) |
+| `v_ai_human_ratio` | Booking attribution | `ai_human_ratio`, `balance_status` |
+| `v_speed_to_lead` | Response times | `avg_speed`, `speed_bucket` |
 
-## Documentation
+---
 
-- [Architecture & Data Flow](docs/ARCHITECTURE.md)
-- [Database Schema](docs/SCHEMA.md)
-- [Dashboard Blueprint](docs/DASHBOARD_BLUEPRINT.md)
-- [Webhook Setup](docs/WEBHOOKS.md)
+## Documentation Index
+
+| Document | Purpose |
+|----------|---------|
+| [Developer Guide](docs/DEVELOPER_GUIDE.md) | Onboarding, setup, common tasks |
+| [Data Dictionary](docs/DATA_DICTIONARY.md) | All fields, formulas, data flow |
+| [Architecture](docs/ARCHITECTURE.md) | System design, integrations |
+| [Schema](docs/SCHEMA.md) | Complete database reference |
+| [Dashboard Blueprint](docs/DASHBOARD_BLUEPRINT.md) | CS Dashboard specs |
+| [Webhooks](docs/WEBHOOKS.md) | Webhook configuration |
+
+---
 
 ## Environment
 
-- **Supabase Project:** `gamwimamcvgakcetdypm`
-- **Database Version:** 7.0.5+
+| Setting | Value |
+|---------|-------|
+| **Supabase Project** | `gamwimamcvgakcetdypm` |
+| **Database** | PostgreSQL 15+ |
+| **Schema Version** | 7.0.5+ |
+
+---
+
+## Recent Changes
+
+- **2026-01-13:** Added `rep_manual` appointment source for GHL calendar bookings
+- **2026-01-13:** Unified appointment webhook (handles both creation and status updates)
+- **2026-01-13:** Added CHECK constraints and performance indexes
+- **2026-01-13:** Reorganized repository structure
+
+---
+
+## Contributing
+
+1. Create a feature branch
+2. Make changes
+3. Update relevant documentation
+4. Test in Supabase SQL Editor
+5. Submit PR with description of changes
+
+See [Developer Guide](docs/DEVELOPER_GUIDE.md) for detailed instructions.
