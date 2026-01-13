@@ -2295,14 +2295,65 @@
     }
 
     // ========================================
-    // DATA LOADING
+    // DATA LOADING - With Server-Side Date Filtering
     // ========================================
+
+    // Call Supabase RPC function with parameters
+    async function callRpcFunction(functionName, params = {}) {
+      const url = `${SUPABASE_URL}/rest/v1/rpc/${functionName}`;
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(params)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`RPC ${functionName}: ${response.status} - ${errorText}`);
+      }
+
+      return response.json();
+    }
+
+    // Try server-side filtered RPC first, fallback to view if not available
+    async function fetchWithDateFilter(viewName, rpcFunctionName, rpcParams, viewOptions = {}) {
+      const dateRange = getDateRangeFilter();
+
+      // Try RPC function with date parameters first
+      if (dateRange && rpcFunctionName) {
+        try {
+          const params = {
+            ...rpcParams,
+            p_start_date: dateRange.start,
+            p_end_date: dateRange.end
+          };
+          return await callRpcFunction(rpcFunctionName, params);
+        } catch (error) {
+          // RPC not available, fallback to view
+          console.warn(`RPC ${rpcFunctionName} not available, using view fallback:`, error.message);
+        }
+      }
+
+      // Fallback to view (no server-side date filtering)
+      return fetchFromSupabase(viewName, viewOptions);
+    }
+
     async function loadDashboardData() {
       showLoading(true);
       hideError();
 
       try {
-        accounts = await fetchFromSupabase('v_cs_account_health');
+        // Use server-side filtering if RPC functions exist, otherwise fallback to view
+        accounts = await fetchWithDateFilter(
+          'v_cs_account_health',
+          'rpc_cs_account_health_by_date',
+          {}
+        );
         filteredAccounts = [...accounts];
         updatePortfolioStats();
         sortAccounts();
@@ -2318,14 +2369,21 @@
     async function loadClientDetail(locationId) {
       showLoading(true);
       hideError();
-      
+      instructionLogDisplayCount = 5; // Reset pagination
+
       try {
+        const dateRange = getDateRangeFilter();
+
         const results = await Promise.allSettled([
           fetchFromSupabase('v_cs_account_health', { filter: `location_id=eq.${locationId}` }),
-          fetchFromSupabase('v_lost_opportunity', { filter: `location_id=eq.${locationId}` }),
-          fetchFromSupabase('v_pipeline_funnel', { filter: `location_id=eq.${locationId}` }),
+          fetchWithDateFilter('v_lost_opportunity', 'rpc_lost_opportunity_by_date',
+            { p_location_id: locationId }, { filter: `location_id=eq.${locationId}` }),
+          fetchWithDateFilter('v_pipeline_funnel', 'rpc_pipeline_funnel_by_date',
+            { p_location_id: locationId }, { filter: `location_id=eq.${locationId}` }),
           fetchFromSupabase('v_rep_complete_scorecard', { filter: `location_id=eq.${locationId}`, order: 'closed_loop_pct.desc.nullslast' }),
-          fetchFromSupabase('v_instruction_log', { filter: `location_id=eq.${locationId}`, order: 'reactivated_at.desc', limit: 25 }),
+          fetchWithDateFilter('v_instruction_log', 'rpc_instruction_log_by_date',
+            { p_location_id: locationId, p_limit: 100 },
+            { filter: `location_id=eq.${locationId}`, order: 'reactivated_at.desc', limit: 100 }),
           fetchFromSupabase('v_pipeline_funnel_by_source', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' })
         ]);
 
@@ -2341,7 +2399,7 @@
         currentActionFilter = 'all';
         currentRepFilter = 'all';
         currentLogSort = 'newest';
-        
+
         // Extract unique reps from instruction log
         const repNames = new Set();
         instructionLogData.forEach(log => {
@@ -2349,15 +2407,15 @@
           if (repName) repNames.add(repName);
         });
         currentReps = Array.from(repNames).sort();
-        
+
         if (!selectedAccount) {
           throw new Error('Client not found');
         }
 
         renderClientDetail({
           account: selectedAccount,
-          lostOpp: lostOppData[0],
-          pipeline: pipelineData[0],
+          lostOpp: Array.isArray(lostOppData) ? lostOppData[0] : lostOppData,
+          pipeline: Array.isArray(pipelineData) ? pipelineData[0] : pipelineData,
           reps: repData,
           instructionLog: instructionLogData,
           sources: sourceData
@@ -3589,41 +3647,43 @@
       return `${Math.floor(days / 7)} weeks ago`;
     }
 
+    // Format date/time directly from ISO string WITHOUT timezone conversion
+    // This ensures "3pm" entered by any client shows as "3pm" regardless of their timezone
     function formatDate(dateStr) {
       if (!dateStr) return '';
-      return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      return formatDateTimeRaw(dateStr, false);
     }
 
     function formatDateTime(dateStr) {
       if (!dateStr) return 'Not scheduled';
-      const date = new Date(dateStr);
-      // Note: Times in database appear to be stored as local times in UTC format
-      // This displays them in the user's local timezone which should match intent
-      return date.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      });
+      return formatDateTimeRaw(dateStr, true);
     }
 
-    // Format time showing the raw UTC value (for debugging/display when data is stored incorrectly)
-    function formatTimeAsEntered(dateStr) {
+    // Core function: Parse ISO string and display time exactly as stored
+    // No timezone conversion - what was entered is what displays
+    function formatDateTimeRaw(dateStr, includeYear = true) {
       if (!dateStr) return 'Not scheduled';
-      // Extract time portion from ISO string and display as-is
-      // This is useful when times were stored as local times in UTC format
-      const match = dateStr.match(/T(\d{2}):(\d{2})/);
-      if (match) {
-        let hour = parseInt(match[1], 10);
-        const minute = match[2];
-        const ampm = hour >= 12 ? 'PM' : 'AM';
-        hour = hour % 12 || 12;
-        return `${hour}:${minute} ${ampm}`;
+
+      // Parse ISO string directly: "2025-01-02T15:30:00+00:00" -> shows "3:30 PM"
+      const match = dateStr.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+      if (!match) {
+        // Fallback for non-standard formats - use as-is
+        return dateStr;
       }
-      return formatDateTime(dateStr);
+
+      const [, year, month, day, hourStr, minute] = match;
+      let hour = parseInt(hourStr, 10);
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      hour = hour % 12 || 12;
+
+      const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthName = months[parseInt(month, 10)];
+      const dayNum = parseInt(day, 10);
+
+      if (includeYear) {
+        return `${monthName} ${dayNum}, ${year}, ${hour}:${minute} ${ampm}`;
+      }
+      return `${monthName} ${dayNum}, ${hour}:${minute} ${ampm}`;
     }
 
     // ========================================
