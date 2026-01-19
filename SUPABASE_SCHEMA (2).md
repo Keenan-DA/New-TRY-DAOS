@@ -1,7 +1,7 @@
 # DRIVE AI 7.0 - Complete Supabase Database Documentation
 
-**Version:** 7.0.5  
-**Last Updated:** December 31, 2025  
+**Version:** 7.0.6
+**Last Updated:** January 19, 2026
 **Database Stats:** 7 Tables | 37 Views | 56 Functions | 6 Triggers | 67 Indexes
 
 ---
@@ -1182,8 +1182,30 @@ total_est_lost_appointments = est_lost_from_overdue + est_lost_from_poor_instruc
 |----------|---------|
 | `update_first_outbound()` | Set first_outbound_at, triggers speed calculation |
 | `update_first_response()` | Set first_response_at, mark responded |
+| `update_lead_response_ghl()` | **GHL webhook handler** - Set first_response_at, mark responded (see note below) |
 | `update_lead_status()` | Change status (active/converted/removed) |
 | `update_lead_source()` | Normalize lead source via dictionary |
+
+**⚠️ `update_lead_response_ghl()` Important Note (Fixed Jan 19, 2026):**
+
+This function handles raw GHL payloads which may contain a `status` field with GHL-specific values (e.g., "new", "open", "won", "lost"). The `leads.status` column has a CHECK constraint (`chk_leads_status`) that only allows: `'active'`, `'converted'`, `'removed'`.
+
+**The function is designed to:**
+1. **Only update response-related fields** - `first_response_at`, `responded`, `time_to_response_minutes`
+2. **Never modify the `status` column** - prevents constraint violations
+3. **Skip if already responded** - only tracks first response
+
+```sql
+-- Core logic (simplified)
+UPDATE leads
+SET
+    first_response_at = COALESCE(first_response_at, NOW()),
+    responded = true,
+    time_to_response_minutes = EXTRACT(EPOCH FROM (NOW() - first_outbound_at)) / 60,
+    updated_at = NOW()
+WHERE contact_id = v_contact_id
+  AND first_response_at IS NULL;
+```
 
 #### Bulk Operations
 
@@ -1600,6 +1622,12 @@ GROUP BY l.id;
 
 ## Changelog
 
+### v7.0.6 (January 19, 2026)
+- **Fixed:** `update_lead_response_ghl` RPC function to prevent `chk_leads_status` constraint violations
+- **Issue:** GHL response webhooks were sending raw payloads containing `status` field with GHL values ("new", "open", "won", "lost") which violated the leads table CHECK constraint (only allows 'active', 'converted', 'removed')
+- **Solution:** Updated RPC function to only update response-related fields (`first_response_at`, `responded`, `time_to_response_minutes`) and never touch the `status` column
+- **Error Fixed:** `{"success":false,"error":"new row for relation \"leads\" violates check constraint \"chk_leads_status\""}`
+
 ### v7.0.5 (December 31, 2025)
 - **Added Column:** `compounding_rate` to `v_cs_account_health` - **NORTH STAR METRIC**
 - **Formula:** `(tasks_last_30 + appointments_last_30) / new_leads_last_30 × 100`
@@ -1635,5 +1663,5 @@ GROUP BY l.id;
 
 ---
 
-*Document last updated: December 31, 2025*
+*Document last updated: January 19, 2026*
 *Verified: 7 Tables | 37 Views | 56 Functions | 6 Triggers | 67 Indexes*

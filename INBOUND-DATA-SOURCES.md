@@ -1,8 +1,8 @@
 # DRIVE AI - INBOUND DATA SOURCES (COMPLETE REFERENCE)
 ## Complete Reference for Data Flowing Into Supabase with Exact n8n Node Configurations
 
-**Version:** 7.0  
-**Updated:** December 30, 2025  
+**Version:** 7.0.1
+**Updated:** January 19, 2026
 **Purpose:** Map every data source, when it fires, what it should populate, and EXACT node configurations
 
 ---
@@ -749,7 +749,7 @@ Content-Type: application/json
 
 ### Webhook 3: First Response Received
 
-**Trigger:** GHL "Message Received" (first only)  
+**Trigger:** GHL "Message Received" (first only)
 **RPC:** `update_lead_response_ghl(payload JSONB)`
 
 **Table:** `leads` (UPDATE)
@@ -759,6 +759,32 @@ Content-Type: application/json
 | `first_response_at` | Timestamp |
 | `responded` | `true` |
 | `time_to_response_minutes` | Calculated |
+
+**⚠️ IMPORTANT: GHL Status Field Conflict (Fixed Jan 19, 2026)**
+
+Raw GHL payloads contain a `status` field with values like `"new"`, `"open"`, `"won"`, `"lost"`, etc. However, the `leads.status` column has a CHECK constraint (`chk_leads_status`) that only allows: `'active'`, `'converted'`, `'removed'`.
+
+**The Fix:** The `update_lead_response_ghl` RPC function was updated to:
+1. **Only update response-related fields** (`first_response_at`, `responded`, `time_to_response_minutes`)
+2. **Never touch the `status` column** - prevents constraint violations
+3. **Skip if already responded** - only tracks first response
+
+**RPC Function Logic:**
+```sql
+-- Only update response-related fields (NEVER touch status)
+UPDATE leads
+SET
+    first_response_at = COALESCE(first_response_at, NOW()),
+    responded = true,
+    time_to_response_minutes = CASE
+        WHEN first_response_at IS NULL AND first_outbound_at IS NOT NULL
+        THEN EXTRACT(EPOCH FROM (NOW() - first_outbound_at)) / 60
+        ELSE time_to_response_minutes
+    END,
+    updated_at = NOW()
+WHERE contact_id = v_contact_id
+  AND first_response_at IS NULL;  -- Only update if not already responded
+```
 
 ---
 
@@ -952,4 +978,13 @@ GROUP BY created_source;
 
 ---
 
-*This document contains the exact n8n node configurations as of December 30, 2025. Any changes to the workflows should be reflected here to maintain accurate documentation.*
+*This document contains the exact n8n node configurations as of January 19, 2026. Any changes to the workflows should be reflected here to maintain accurate documentation.*
+
+---
+
+## CHANGELOG
+
+### v7.0.1 (January 19, 2026)
+- **Fixed:** `update_lead_response_ghl` RPC function to prevent `chk_leads_status` constraint violations
+- **Issue:** GHL payloads contain `status` values like "new", "open", "won" which conflict with leads table constraint (only allows 'active', 'converted', 'removed')
+- **Solution:** Updated RPC to only update response-related fields, never touching the `status` column
