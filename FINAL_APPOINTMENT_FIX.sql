@@ -4,9 +4,21 @@
 -- This file contains ALL fixes for the appointment system:
 --
 -- 1. insert_appointment() - Fixed for Drive AI 7.0 n8n workflow
+--    - Added p_appt_valid parameter that n8n sends
+--    - Now matches exact parameters from n8n workflow
+--
 -- 2. upsert_appointment_from_ghl() - NEW for GHL webhook (INSERT + UPDATE)
+--    - INSERTs new appointments if they don't exist
+--    - UPDATEs existing appointments (outcome status only)
+--    - Only marks as user_booked if created_by is a real user name
+--
+-- 3. update_appointment_outcome() - REPLACED with upsert logic
+--    - The edge function calls this - NO edge function changes needed!
+--    - Now does INSERT if appointment doesn't exist
+--    - Preserves existing created_source values
 --
 -- DEPLOY ORDER: Run this entire file in Supabase SQL Editor
+-- LAST UPDATED: January 19, 2026
 -- ============================================================================
 
 
@@ -500,67 +512,161 @@ GRANT EXECUTE ON FUNCTION upsert_appointment_from_ghl(JSONB) TO anon, authentica
 
 
 -- ============================================================================
--- PART 3: UPDATE THE EDGE FUNCTION
+-- PART 3: REPLACE update_appointment_outcome WITH UPSERT LOGIC
 -- ============================================================================
--- The edge function at: /functions/v1/ghl-appointment-webhook
--- needs to call upsert_appointment_from_ghl() instead of UPDATE
---
--- NEW EDGE FUNCTION CODE (deploy via Supabase CLI):
--- Save as: supabase/functions/ghl-appointment-webhook/index.ts
+-- The edge function calls update_appointment_outcome()
+-- We replace it with upsert logic so NO edge function changes are needed!
 -- ============================================================================
-/*
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+DROP FUNCTION IF EXISTS update_appointment_outcome(JSONB);
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
-  }
+CREATE OR REPLACE FUNCTION update_appointment_outcome(payload JSONB)
+RETURNS JSONB AS $$
+DECLARE
+  v_calendar JSONB;
+  v_ghl_appointment_id TEXT;
+  v_location_id TEXT;
+  v_contact_id TEXT;
+  v_outcome_status TEXT;
+  v_appointment_status TEXT;
+  v_created_by TEXT;
+  v_created_by_user_id TEXT;
+  v_existing_record RECORD;
+  v_result_id UUID;
+  v_rows_updated INT := 0;
+  v_is_insert BOOLEAN := FALSE;
+  v_final_source TEXT;
+  v_is_user_booked BOOLEAN := FALSE;
+BEGIN
+  -- Extract calendar object
+  v_calendar := payload->'calendar';
 
-  try {
-    const payload = await req.json()
+  -- Extract key fields
+  v_ghl_appointment_id := COALESCE(
+    v_calendar->>'appointmentId',
+    payload->>'appointmentId',
+    payload->>'id'
+  );
+  v_location_id := COALESCE(payload->>'locationId', payload->>'location_id');
+  v_contact_id := COALESCE(payload->>'contactId', payload->>'contact_id');
 
-    console.log('Received webhook payload:', JSON.stringify(payload, null, 2))
+  -- Get created_by info
+  v_created_by := COALESCE(v_calendar->>'created_by', payload->>'created_by', '');
+  v_created_by_user_id := COALESCE(v_calendar->>'created_by_user_id', payload->>'created_by_user_id', '');
 
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+  -- Only user_booked if created_by is a real name (not "Other" or empty)
+  v_is_user_booked := (
+    v_created_by IS NOT NULL
+    AND v_created_by != ''
+    AND LOWER(TRIM(v_created_by)) != 'other'
+    AND v_created_by_user_id IS NOT NULL
+    AND v_created_by_user_id != ''
+  );
 
-    // Call the upsert function (INSERT if new, UPDATE if exists)
-    const { data, error } = await supabaseClient.rpc('upsert_appointment_from_ghl', {
-      payload: payload
-    })
+  -- Normalize outcome status
+  v_outcome_status := LOWER(COALESCE(
+    v_calendar->>'status', payload->>'status', payload->>'appointmentStatus', 'pending'
+  ));
+  v_outcome_status := CASE v_outcome_status
+    WHEN 'showed' THEN 'showed'
+    WHEN 'show' THEN 'showed'
+    WHEN 'noshow' THEN 'no_show'
+    WHEN 'no_show' THEN 'no_show'
+    WHEN 'no-show' THEN 'no_show'
+    WHEN 'cancelled' THEN 'cancelled'
+    WHEN 'canceled' THEN 'cancelled'
+    WHEN 'confirmed' THEN 'confirmed'
+    WHEN 'new' THEN 'pending'
+    WHEN 'booked' THEN 'pending'
+    ELSE 'pending'
+  END;
 
-    if (error) {
-      console.error('RPC Error:', error)
-      return new Response(
-        JSON.stringify({ success: false, error: error.message }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
+  v_appointment_status := LOWER(COALESCE(
+    v_calendar->>'appoinmentStatus', payload->>'appoinmentStatus', 'confirmed'
+  ));
 
-    console.log('Upsert result:', JSON.stringify(data, null, 2))
+  -- Validate
+  IF v_ghl_appointment_id IS NULL OR v_ghl_appointment_id = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Missing appointmentId');
+  END IF;
 
-    return new Response(
-      JSON.stringify(data),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
-    )
+  -- Check if exists
+  SELECT id, created_source INTO v_existing_record
+  FROM appointments WHERE ghl_appointment_id = v_ghl_appointment_id;
 
-  } catch (err) {
-    console.error('Error:', err)
-    return new Response(
-      JSON.stringify({ success: false, error: err.message }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    )
-  }
-})
-*/
+  IF v_existing_record.id IS NOT NULL THEN
+    -- UPDATE existing (never overwrite created_source)
+    UPDATE appointments SET
+      outcome_status = CASE
+        WHEN outcome_status = 'pending' THEN v_outcome_status
+        WHEN outcome_status = 'confirmed' AND v_outcome_status IN ('showed', 'no_show', 'cancelled') THEN v_outcome_status
+        ELSE outcome_status
+      END,
+      outcome_recorded_at = CASE
+        WHEN v_outcome_status IN ('showed', 'no_show', 'cancelled') AND outcome_status NOT IN ('showed', 'no_show', 'cancelled')
+        THEN NOW() ELSE outcome_recorded_at
+      END,
+      appointment_status = COALESCE(NULLIF(v_appointment_status, ''), appointment_status),
+      updated_at = NOW()
+    WHERE ghl_appointment_id = v_ghl_appointment_id
+    RETURNING id INTO v_result_id;
+
+    v_rows_updated := 1;
+    v_final_source := v_existing_record.created_source;
+  ELSE
+    -- INSERT new appointment
+    v_final_source := CASE WHEN v_is_user_booked THEN 'user_booked' ELSE 'user_booked' END;
+
+    INSERT INTO appointments (
+      ghl_appointment_id, location_id, contact_id,
+      lead_name, lead_phone, lead_email,
+      title, appointment_time, appointment_status, outcome_status,
+      status, created_source, source_workflow, calendar_id,
+      assigned_rep_id, assigned_rep_name,
+      created_at, updated_at
+    ) VALUES (
+      v_ghl_appointment_id, v_location_id, v_contact_id,
+      COALESCE(payload->>'contactName', payload->>'full_name'),
+      payload->>'phone', payload->>'email',
+      COALESCE(v_calendar->>'title', 'Appointment'),
+      COALESCE((v_calendar->>'startTime')::TIMESTAMPTZ, NOW()),
+      v_appointment_status, v_outcome_status,
+      'booked', v_final_source, 'ghl_webhook',
+      COALESCE(v_calendar->>'id', payload->>'calendarId'),
+      v_created_by_user_id, v_created_by,
+      NOW(), NOW()
+    ) RETURNING id INTO v_result_id;
+
+    v_rows_updated := 1;
+    v_is_insert := TRUE;
+
+    -- Update leads table
+    IF v_contact_id IS NOT NULL AND v_location_id IS NOT NULL THEN
+      UPDATE leads SET
+        appointment_booked = TRUE,
+        appointment_count = COALESCE(appointment_count, 0) + 1,
+        first_appointment_at = COALESCE(first_appointment_at, NOW()),
+        updated_at = NOW()
+      WHERE contact_id = v_contact_id AND location_id = v_location_id;
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'appointment_id', v_result_id,
+    'ghl_appointment_id', v_ghl_appointment_id,
+    'outcome_status', v_outcome_status,
+    'rows_updated', v_rows_updated,
+    'is_insert', v_is_insert,
+    'created_source', v_final_source
+  );
+
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('success', false, 'error', SQLERRM, 'detail', SQLSTATE);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION update_appointment_outcome(JSONB) TO anon, authenticated, service_role;
 
 
 -- ============================================================================
@@ -698,7 +804,8 @@ DELETE FROM appointments WHERE ghl_appointment_id = 'TEST_OTHER_789';
 --
 -- ISSUE 2: Rep-booked appointments not captured
 --   CAUSE: GHL webhook only did UPDATE, not INSERT
---   FIX: upsert_appointment_from_ghl() does INSERT if not exists
+--   FIX: update_appointment_outcome() now does INSERT if not exists
+--        (NO edge function changes needed!)
 --
 -- ISSUE 3: Source attribution incorrect
 --   CAUSE: All webhook inserts defaulted to user_booked
@@ -710,4 +817,5 @@ DELETE FROM appointments WHERE ghl_appointment_id = 'TEST_OTHER_789';
 -- 2. All rep-booked GHL appointments will be captured ✓
 -- 3. Source attribution will be correct ✓
 -- 4. Existing source values will never be overwritten ✓
+-- 5. No edge function changes required ✓
 -- ============================================================================

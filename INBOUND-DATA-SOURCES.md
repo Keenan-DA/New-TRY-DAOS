@@ -749,7 +749,7 @@ Content-Type: application/json
 
 ### Webhook 3: First Response Received
 
-**Trigger:** GHL "Message Received" (first only)  
+**Trigger:** GHL "Message Received" (first only)
 **RPC:** `update_lead_response_ghl(payload JSONB)`
 
 **Table:** `leads` (UPDATE)
@@ -759,6 +759,44 @@ Content-Type: application/json
 | `first_response_at` | Timestamp |
 | `responded` | `true` |
 | `time_to_response_minutes` | Calculated |
+
+### Webhook 4: Appointment Outcome (UPSERT)
+
+**Trigger:** GHL Appointment status changes (booked, confirmed, showed, no-show, cancelled)
+**RPC:** `update_appointment_outcome(payload JSONB)`
+**Behavior:** **UPSERT** - INSERT if appointment doesn't exist, UPDATE if it does
+
+**Table:** `appointments` (INSERT or UPDATE)
+
+**GHL Payload Structure:**
+```json
+{
+  "locationId": "xxx",
+  "contactId": "xxx",
+  "contactName": "John Doe",
+  "phone": "+15551234567",
+  "email": "john@example.com",
+  "calendar": {
+    "appointmentId": "xxx",
+    "title": "Store Appointment",
+    "startTime": "2026-01-20T15:00:00",
+    "status": "booked",
+    "appoinmentStatus": "confirmed",
+    "created_by": "Rep Name",        // User name OR "Other" OR empty
+    "created_by_user_id": "user-id"  // User ID if created by user
+  }
+}
+```
+
+**Source Logic:**
+| `created_by` Value | `created_source` |
+|-------------------|------------------|
+| Real user name (e.g., "John Smith") | `user_booked` |
+| "Other" | `user_booked` (default) |
+| Empty/null | `user_booked` (default) |
+| (Existing appointment) | **NEVER overwritten** |
+
+**Important:** This webhook now captures rep-booked appointments that were previously missed.
 
 ---
 
@@ -786,7 +824,8 @@ SELECT
   
   -- Appointments by source
   (SELECT COUNT(*) FROM appointments WHERE created_source = 'ai_automated') as ai_booked_appointments,
-  (SELECT COUNT(*) FROM appointments WHERE created_source = 'rep_instructed') as rep_booked_appointments,
+  (SELECT COUNT(*) FROM appointments WHERE created_source = 'rep_instructed') as rep_instructed_appointments,
+  (SELECT COUNT(*) FROM appointments WHERE created_source = 'user_booked') as user_booked_appointments,
   
   -- Leads
   (SELECT COUNT(*) FROM leads) as total_leads,

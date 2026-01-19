@@ -1172,9 +1172,10 @@ total_est_lost_appointments = est_lost_from_overdue + est_lost_from_poor_instruc
 | `insert_lead()` | Insert or update lead record | Lead Tracker workflow |
 | `upsert_task()` | Insert or update task (by task_id) | Drive AI 7.0 workflow |
 | `insert_reactivation()` | Insert reactivation and complete tasks | Reactivate Drive workflow |
-| `insert_appointment()` | Insert new appointment | Drive AI 7.0 / Reactivate workflow |
+| `insert_appointment()` | Insert new appointment (accepts `p_appt_valid` param) | Drive AI 7.0 / Reactivate workflow |
 | `insert_ai_decision()` | Log AI decision | Drive AI 7.0 workflow |
-| `update_appointment_outcome()` | Update outcome status | GHL Appointment Outcome webhook |
+| `update_appointment_outcome()` | **UPSERT** - INSERT if not exists, UPDATE if exists | GHL Appointment Outcome webhook |
+| `upsert_appointment_from_ghl()` | Alternative upsert for GHL webhooks | GHL webhooks (optional) |
 
 #### Lead Update Functions
 
