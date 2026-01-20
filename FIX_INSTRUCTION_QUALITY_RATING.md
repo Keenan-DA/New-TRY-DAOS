@@ -66,52 +66,43 @@ When a rep writes "Jaxon called...", they're providing context about what happen
 
 ## Solution: Updated Regex Patterns
 
+> **Note:** The complete, deployment-ready SQL is in the "Complete Updated View SQL" section below. These pattern descriptions are summaries.
+
 ### New CONTEXT Pattern (expanded)
 
 Add past-tense action words to CONTEXT detection (they describe what happened):
 
-```sql
-has_context AS (
-  instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y'
-)
-```
+**Key additions:**
+- Past tense: `called`, `tried`, `attempted`, `reached`, `texted`, `emailed`, `contacted`, `timed out`, `rescheduled`, `rebooked`, `received`
+- Situation words: `sorry`, `application`, `approval`
+- Vehicle brands: `kawasaki`, `yamaha`, `suzuki`, `bmw`, `ducati`, `indian`, `polaris`, `can-am`, `ktm`, `triumph`
+- Generic terms: `atv`, `utv`, `side by side`, `motorcycle`, `bike`, `ninja`, `zx`
 
 ### New ACTION Pattern (more restrictive - imperative only)
 
 Only match imperative/directive phrases (what DAOS should do):
 
-```sql
-has_action AS (
-  instruction ~* '(^|\s)(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk|speak|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come)(\s|$|\.|\,|\!)'
-  -- EXCLUDES past-tense: "called", "tried", "reached", "spoke", "texted", etc.
-  -- Those are CONTEXT (what was done), not ACTION (what to do)
-)
-```
+**Key additions:**
+- `let .{1,20} know` - matches "let customer know", "let him know", "let Elsa know"
+- `make .{1,20} aware` - matches "make them aware"
+- `reschedule` (imperative, not past tense "rescheduled")
+- `check in`, `check with`
+- `start outreach`, `begin outreach`, `start engagement`, `begin engagement`
+- `pause` (as in "pause engagement")
+- `bring .{1,15} in`, `get .{1,15} in`, `have .{1,15} come`
 
-Key changes:
-- Uses word boundary anchors to avoid matching within words
-- Excludes past tense forms
-- `let .{1,20} know` matches "let customer know", "let him know", etc.
-- `bring .{1,15} in` / `get .{1,15} in` matches "bring them in", "get him in", etc.
+**Excludes past-tense:** `called`, `spoke`, `tried`, `reached`, `texted` → these are CONTEXT
 
 ### New TIME Pattern (improved "now" detection)
 
-Ensure "now" and similar immediate timing words are properly detected:
-
+**Key fix:** Explicit standalone "now" check that won't fail:
 ```sql
-has_timing AS (
-  -- Split into patterns OR'd together for reliability
-  instruction ~* '(^|[^a-z])now([^a-z]|$)'  -- Explicit "now" check
-  OR instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|noon|midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
-  OR instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)|at noon|at midnight'
-)
+instruction ~* '(^|[^a-z])now([^a-z]|$)'
 ```
 
-Key changes:
-- **Explicit standalone "now" check** using `(^|[^a-z])now([^a-z]|$)` - matches "now" not preceded/followed by letters
-- Separated time patterns into logical groups for reliability
-- "right now", "right away" in word-boundary group
-- Numeric time patterns (2:00pm, at 3, etc.) in separate group
+**Key additions:**
+- `noon`, `midnight` as time references
+- `at noon`, `at midnight` patterns
 
 ---
 
