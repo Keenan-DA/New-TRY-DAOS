@@ -1408,6 +1408,205 @@
     .status-badge.fair { background: rgba(234, 179, 8, 0.15); color: var(--yellow); }
     .status-badge.needs-coaching { background: rgba(239, 68, 68, 0.15); color: var(--red); }
 
+    /* Rep Performance Badges */
+    .rep-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 8px;
+    }
+
+    .rep-badge.power-user {
+      background: linear-gradient(135deg, rgba(211, 251, 64, 0.2), rgba(211, 251, 64, 0.1));
+      color: var(--brand);
+      border: 1px solid var(--brand);
+    }
+
+    .rep-badge.rising-star {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--purple);
+      border: 1px solid var(--purple);
+    }
+
+    .rep-badge.needs-training {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .focus-area {
+      font-size: 10px;
+      color: var(--gray-text);
+      padding: 6px 10px;
+      background: var(--dark);
+      border-radius: 4px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .focus-area.loop { border-left: 2px solid var(--orange); }
+    .focus-area.clarity { border-left: 2px solid var(--purple); }
+    .focus-area.marking { border-left: 2px solid var(--cyan); }
+
+    .focus-icon { font-size: 10px; }
+
+    /* Enhanced Leaderboard Table */
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .leaderboard-table th {
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-light);
+      border-bottom: 1px solid var(--gray-dark);
+      background: var(--dark-2);
+    }
+
+    .leaderboard-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--gray-dark);
+      vertical-align: top;
+    }
+
+    .leaderboard-table tr:last-child td { border-bottom: none; }
+    .leaderboard-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .rep-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .rep-name-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .metric-mini {
+      font-size: 10px;
+      color: var(--gray-text);
+    }
+
+    .metric-mini strong {
+      font-weight: 600;
+    }
+
+    /* Pipeline Funnel Stats */
+    .funnel-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .funnel-stat-card {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 8px;
+      padding: 14px 12px;
+      text-align: center;
+    }
+
+    .funnel-stat-card.highlight {
+      border-color: var(--brand);
+      background: linear-gradient(135deg, rgba(211, 251, 64, 0.08), rgba(211, 251, 64, 0.02));
+    }
+
+    .funnel-stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .funnel-stat-label {
+      font-size: 9px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 6px;
+    }
+
+    .funnel-stat-detail {
+      font-size: 10px;
+      color: var(--gray-text);
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .funnel-stat-pct {
+      font-weight: 600;
+    }
+
+    .funnel-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0;
+      font-size: 10px;
+      color: var(--gray-light);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .funnel-divider::before,
+    .funnel-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gray-dark);
+    }
+
+    .speed-to-lead-box {
+      background: var(--dark-2);
+      border: 1px solid var(--gray-dark);
+      border-radius: 8px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .speed-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--gray-text);
+    }
+
+    .speed-icon { font-size: 16px; }
+
+    .speed-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--brand);
+    }
+
+    .speed-unit {
+      font-size: 11px;
+      color: var(--gray-light);
+      margin-left: 4px;
+    }
+
     /* Pipeline Performance */
     .pipeline-stats-grid {
       display: grid;
@@ -1921,18 +2120,28 @@
       .risk-grid { grid-template-columns: repeat(2, 1fr); }
       .task-stats-grid { grid-template-columns: repeat(2, 1fr); }
       .pipeline-stats-grid { grid-template-columns: 1fr; }
+      .funnel-stats-grid { grid-template-columns: repeat(2, 1fr); }
       .adoption-components-grid { grid-template-columns: 1fr; }
       .log-entry-main { grid-template-columns: 1fr; gap: 10px; }
       .adoption-hero-main { flex-direction: column; align-items: flex-start; }
+      .leaderboard-table { font-size: 11px; }
+      .leaderboard-table th, .leaderboard-table td { padding: 8px 6px; }
+      .rep-badge { font-size: 8px; padding: 2px 6px; }
     }
 
     @media (max-width: 768px) {
       .stats-grid, .risk-grid, .task-stats-grid { grid-template-columns: 1fr; }
+      .funnel-stats-grid { grid-template-columns: 1fr; }
       .north-star-content { flex-direction: column; align-items: flex-start; }
       .north-star-breakdown { margin-left: 0; margin-top: 12px; }
       .compounding-main { flex-direction: column; align-items: flex-start; }
       .top-nav { padding: 0 12px; gap: 10px; }
       .search-container { max-width: 160px; }
+      .speed-to-lead-box { flex-direction: column; gap: 8px; text-align: center; }
+      .leaderboard-table th:nth-child(n+3), .leaderboard-table td:nth-child(n+3) { display: none; }
+      .leaderboard-table th:nth-child(1), .leaderboard-table td:nth-child(1),
+      .leaderboard-table th:nth-child(2), .leaderboard-table td:nth-child(2),
+      .leaderboard-table th:last-child, .leaderboard-table td:last-child { display: table-cell; }
     }
   </style>
 </head>
@@ -2779,29 +2988,71 @@
               Rep Leaderboard
             </div>
           </div>
-          <div class="section-card-body" style="padding: 0;">
-            <table class="data-table">
+          <div class="section-card-body" style="padding: 0; overflow-x: auto;">
+            <table class="leaderboard-table">
               <thead>
                 <tr>
-                  <th>Rep Name</th>
-                  <th>Tasks</th>
-                  <th>Completed</th>
-                  <th>Loop %</th>
-                  <th>Clarity %</th>
-                  <th>Status</th>
+                  <th style="min-width: 180px;">Rep</th>
+                  <th style="text-align: center;">Tasks</th>
+                  <th style="text-align: center;">Appts</th>
+                  <th style="text-align: center;">Loop %</th>
+                  <th style="text-align: center;">Quality</th>
+                  <th style="text-align: center;">Marking</th>
+                  <th style="min-width: 120px;">Status</th>
                 </tr>
               </thead>
               <tbody>
-                ${reps.map(rep => `
+                ${reps.map(rep => {
+                  const badge = getRepBadge(rep);
+                  const focusArea = getRepFocusArea(rep);
+                  const markingRate = rep.marking_rate || (rep.past_appointments > 0 ? Math.round(100 * ((rep.showed || 0) + (rep.no_shows || 0)) / rep.past_appointments) : null);
+
+                  return `
                   <tr>
-                    <td class="rep-name">${rep.rep_name || 'Unknown'}</td>
-                    <td>${rep.total_tasks || 0}</td>
-                    <td>${rep.completed_tasks || 0}</td>
-                    <td style="color: ${getScoreColorValue(rep.closed_loop_pct)};">${rep.closed_loop_pct || 0}%</td>
-                    <td style="color: ${getScoreColorValue(rep.clarity_pct)};">${rep.clarity_pct || 0}%</td>
-                    <td><span class="status-badge ${getRepStatusClass(rep.performance_status)}">${formatRepStatus(rep.performance_status)}</span></td>
+                    <td>
+                      <div class="rep-cell">
+                        <div class="rep-name-row">
+                          <span class="rep-name">${rep.rep_name || 'Unknown'}</span>
+                          ${badge ? `<span class="rep-badge ${badge.badge}">${badge.icon} ${badge.text}</span>` : ''}
+                        </div>
+                        ${focusArea ? `
+                        <div class="focus-area ${focusArea.metric}">
+                          <span class="focus-icon">🎯</span>
+                          <span>${focusArea.text}</span>
+                        </div>
+                        ` : ''}
+                      </div>
+                    </td>
+                    <td style="text-align: center;">
+                      <div style="font-weight: 600; color: var(--white);">${rep.total_tasks || 0}</div>
+                      <div class="metric-mini">
+                        <span style="color: var(--green);">${rep.completed_tasks || 0}</span> /
+                        <span style="color: ${(rep.overdue_tasks || 0) > 0 ? 'var(--red)' : 'var(--gray-text)'};">${rep.overdue_tasks || 0} late</span>
+                      </div>
+                    </td>
+                    <td style="text-align: center;">
+                      <div style="font-weight: 600; color: var(--white);">${rep.total_appointments || 0}</div>
+                      <div class="metric-mini">
+                        <span style="color: var(--green);">${rep.showed || 0}</span> showed
+                      </div>
+                    </td>
+                    <td style="text-align: center;">
+                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.closed_loop_pct)};">${rep.closed_loop_pct || 0}%</div>
+                    </td>
+                    <td style="text-align: center;">
+                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.clarity_pct)};">${rep.clarity_pct || 0}%</div>
+                    </td>
+                    <td style="text-align: center;">
+                      ${markingRate !== null ? `
+                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(markingRate)};">${markingRate}%</div>
+                      <div class="metric-mini">${rep.unmarked_appointments || 0} unmarked</div>
+                      ` : `<span style="color: var(--gray-light);">—</span>`}
+                    </td>
+                    <td>
+                      <span class="status-badge ${getRepStatusClass(rep.performance_status)}">${formatRepStatus(rep.performance_status)}</span>
+                    </td>
                   </tr>
-                `).join('')}
+                `}).join('')}
               </tbody>
             </table>
           </div>
@@ -2818,55 +3069,79 @@
             </div>
           </div>
           <div class="section-card-body">
-            <div class="pipeline-stats-grid">
-              <div class="pipeline-stat-card">
-                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${pipeline.reply_rate || 0}%</div>
-                <div class="pipeline-stat-label">Response Rate</div>
-                <div class="pipeline-stat-sub">${pipeline.total_responses || 0} replied</div>
+            <!-- Main Funnel Metrics -->
+            <div class="funnel-stats-grid">
+              <div class="funnel-stat-card highlight">
+                <div class="funnel-stat-value" style="color: var(--brand);">${calculateInternetLeads(sources)}</div>
+                <div class="funnel-stat-label">Internet Leads</div>
+                <div class="funnel-stat-detail">
+                  <span>Excludes walk-in, phone, drive-by</span>
+                </div>
               </div>
-              <div class="pipeline-stat-card">
-                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}%</div>
-                <div class="pipeline-stat-label">Appointment Rate</div>
-                <div class="pipeline-stat-sub">${pipeline.appointments_booked || 0} booked</div>
+              <div class="funnel-stat-card">
+                <div class="funnel-stat-value" style="color: var(--white);">${pipeline.appointments_booked || 0}</div>
+                <div class="funnel-stat-label">Appointments</div>
+                <div class="funnel-stat-detail">
+                  <span class="funnel-stat-pct" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}% of leads</span>
+                </div>
               </div>
-              <div class="pipeline-stat-card">
-                <div class="pipeline-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</div>
-                <div class="pipeline-stat-label">Show Rate</div>
-                <div class="pipeline-stat-sub">on marked appts</div>
+              <div class="funnel-stat-card">
+                <div class="funnel-stat-value" style="color: var(--green);">${pipeline.showed || 0}</div>
+                <div class="funnel-stat-label">Showed</div>
+                <div class="funnel-stat-detail">
+                  <span class="funnel-stat-pct" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}% show rate</span>
+                  <span style="font-size: 9px; color: var(--gray-light);">on ${(pipeline.showed || 0) + (pipeline.no_shows || 0)} marked appts</span>
+                </div>
+              </div>
+              <div class="funnel-stat-card">
+                <div class="funnel-stat-value" style="color: var(--red);">${pipeline.no_shows || 0}</div>
+                <div class="funnel-stat-label">No-Shows</div>
+                <div class="funnel-stat-detail">
+                  <span class="funnel-stat-pct">${pipeline.showed + pipeline.no_shows > 0 ? Math.round(100 * pipeline.no_shows / (pipeline.showed + pipeline.no_shows)) : 0}% no-show rate</span>
+                </div>
               </div>
             </div>
-            <div class="appt-marking-box">
+
+            <!-- Totals Summary -->
+            <div class="appt-marking-box" style="margin-bottom: 16px;">
               <div class="appt-marking-title">
                 <span>📋</span>
-                Appointment Marking
+                Appointment Marking Status
               </div>
               <div class="appt-marking-breakdown">
                 <div class="marking-row">
-                  <span class="marking-label">Past Appointments:</span>
+                  <span class="marking-label">Total Past Appointments:</span>
                   <span class="marking-value">${pipeline.past_appointments || 0}</span>
                 </div>
                 <div class="marking-row">
                   <span class="marking-icon">✅</span>
-                  <span class="marking-label">Showed:</span>
-                  <span class="marking-value" style="color: var(--green);">${pipeline.showed || 0}</span>
-                </div>
-                <div class="marking-row">
-                  <span class="marking-icon">❌</span>
-                  <span class="marking-label">No-Show:</span>
-                  <span class="marking-value" style="color: var(--red);">${pipeline.no_shows || 0}</span>
+                  <span class="marking-label">Marked (Showed + No-Show):</span>
+                  <span class="marking-value" style="color: var(--green);">${(pipeline.showed || 0) + (pipeline.no_shows || 0)}</span>
                 </div>
                 <div class="marking-row">
                   <span class="marking-icon">⚠️</span>
-                  <span class="marking-label">Unmarked:</span>
+                  <span class="marking-label">Unmarked (Need Outcomes):</span>
                   <span class="marking-value" style="color: var(--orange);">${pipeline.unmarked_appointments || 0}</span>
                 </div>
               </div>
               ${pipeline.unmarked_appointments > 0 ? `
               <div class="marking-warning">
                 <span class="warning-icon">⚠️</span>
-                <div class="warning-text"><strong>${pipeline.unmarked_appointments} appointments need outcomes recorded.</strong></div>
+                <div class="warning-text"><strong>${pipeline.unmarked_appointments} appointments need outcomes recorded.</strong> Show rate is calculated only on marked appointments.</div>
               </div>
               ` : ''}
+            </div>
+
+            <!-- Speed to Lead -->
+            <div class="speed-to-lead-box">
+              <div class="speed-label">
+                <span class="speed-icon">⚡</span>
+                <span>Speed to Lead</span>
+              </div>
+              <div>
+                <span class="speed-value">${pipeline.avg_speed_to_lead_minutes ? pipeline.avg_speed_to_lead_minutes.toFixed(1) : (pipeline.avg_speed_to_lead_seconds ? (pipeline.avg_speed_to_lead_seconds / 60).toFixed(1) : '—')}</span>
+                <span class="speed-unit">min avg</span>
+              </div>
             </div>
           </div>
         </div>
@@ -3372,6 +3647,70 @@
       if (level === 'partial') return 'partial';
       if (level === 'incomplete') return 'incomplete';
       return 'empty';
+    }
+
+    // Calculate internet leads (exclude walk-in, phone-up, drive-by, etc.)
+    function calculateInternetLeads(sources) {
+      if (!sources || !sources.length) return 0;
+      const nonInternetSources = ['walk-in', 'walk in', 'walkin', 'phone-up', 'phone up', 'phoneup', 'phone', 'drive-by', 'drive by', 'driveby', 'showroom', 'lot', 'referral'];
+      return sources
+        .filter(s => {
+          const src = (s.lead_source || '').toLowerCase();
+          return !nonInternetSources.some(ni => src.includes(ni));
+        })
+        .reduce((sum, s) => sum + (s.total_leads || 0), 0);
+    }
+
+    // Get rep performance badge
+    function getRepBadge(rep) {
+      const loop = rep.closed_loop_pct || 0;
+      const clarity = rep.clarity_pct || 0;
+      const showRate = rep.show_rate || 0;
+      const markingRate = rep.marking_rate || 0;
+
+      // Power User: top performer in all metrics
+      if (loop >= 85 && clarity >= 70 && (markingRate >= 80 || rep.past_appointments === 0)) {
+        return { badge: 'power-user', icon: '⭐', text: 'Power User' };
+      }
+      // Rising Star: good and improving
+      if (loop >= 70 && clarity >= 60) {
+        return { badge: 'rising-star', icon: '🚀', text: 'Rising Star' };
+      }
+      // Needs Training
+      if (loop < 50 || clarity < 40) {
+        return { badge: 'needs-training', icon: '📚', text: 'Needs Training' };
+      }
+      return null;
+    }
+
+    // Get focus area for underperformers
+    function getRepFocusArea(rep) {
+      const loop = rep.closed_loop_pct || 0;
+      const clarity = rep.clarity_pct || 0;
+      const markingRate = rep.marking_rate || 0;
+      const overdue = rep.overdue_tasks || 0;
+
+      const issues = [];
+
+      if (loop < 50 && overdue > 0) {
+        issues.push({ priority: 1, text: `Close ${overdue} overdue tasks`, metric: 'loop' });
+      } else if (loop < 70) {
+        issues.push({ priority: 2, text: 'Complete tasks before due dates', metric: 'loop' });
+      }
+
+      if (clarity < 40) {
+        issues.push({ priority: 1, text: 'Add context + action + timing to instructions', metric: 'clarity' });
+      } else if (clarity < 60) {
+        issues.push({ priority: 2, text: 'Improve instruction detail', metric: 'clarity' });
+      }
+
+      if (markingRate < 50 && rep.unmarked_appointments > 0) {
+        issues.push({ priority: 1, text: `Mark ${rep.unmarked_appointments} appointment outcomes`, metric: 'marking' });
+      }
+
+      // Return highest priority issue
+      issues.sort((a, b) => a.priority - b.priority);
+      return issues[0] || null;
     }
 
     function formatDaysAgo(days) {
