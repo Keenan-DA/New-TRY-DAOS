@@ -2648,7 +2648,7 @@
                 <div class="account-name">${account.dealership_name}</div>
               </div>
               <div class="account-meta">
-                <div class="health-badge ${healthClass}">Health: ${account.adoption_score || 0}</div>
+                <div class="health-badge ${healthClass}">Health: ${roundPct(account.adoption_score)}</div>
                 <div class="trend-indicator ${trendClass}">${trendIcon} ${account.health_trend || 'STABLE'}</div>
               </div>
             </div>
@@ -2666,15 +2666,15 @@
               ` : ''}
               <div class="metric-item">
                 <span class="metric-label">Loop:</span>
-                <span class="metric-value ${getScoreColor(account.closed_loop_score)}">${account.closed_loop_score || 0}%</span>
+                <span class="metric-value ${getScoreColor(account.closed_loop_score)}">${roundPct(account.closed_loop_score)}%</span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Clarity:</span>
-                <span class="metric-value ${getScoreColor(account.clarity_score)}">${account.clarity_score || 0}%</span>
+                <span class="metric-value ${getScoreColor(account.clarity_score)}">${roundPct(account.clarity_score)}%</span>
               </div>
               <div class="metric-item">
                 <span class="metric-label">Mark:</span>
-                <span class="metric-value">${account.marking_score || 0}%</span>
+                <span class="metric-value">${roundPct(account.marking_score)}%</span>
               </div>
             </div>
             ${account.overdue_tasks > 0 ? `
@@ -2696,7 +2696,7 @@
                 </div>
                 <div class="footer-stat">
                   <span>✅</span>
-                  <span>Show Rate: ${account.show_rate || 0}%</span>
+                  <span>Show Rate: ${roundPct(account.show_rate)}%</span>
                 </div>
               </div>
               <button class="view-details-btn" onclick="event.stopPropagation(); showClientDetail('${account.location_id}')">
@@ -2750,7 +2750,7 @@
             <div>
               <div class="client-name">${account.dealership_name}</div>
               <div class="client-status">
-                <span class="health-badge ${healthClass}">Health: ${account.adoption_score || 0}</span>
+                <span class="health-badge ${healthClass}">Health: ${roundPct(account.adoption_score)}</span>
                 <span class="trend-indicator ${getTrendClass(account.health_trend)}">${getTrendIcon(account.health_trend)} ${account.health_trend || 'STABLE'}</span>
               </div>
             </div>
@@ -2768,7 +2768,7 @@
           
           <div class="adoption-hero-main">
             <div class="adoption-score-display">
-              <div class="adoption-score-large ${adoptionClass}">${account.adoption_score || 0}</div>
+              <div class="adoption-score-large ${adoptionClass}">${roundPct(account.adoption_score)}</div>
               <div class="adoption-score-max">out of 100</div>
             </div>
             <div class="adoption-summary-box">
@@ -2789,13 +2789,13 @@
                 <div class="component-card-weight">40% weight</div>
               </div>
               <div class="component-score-row">
-                <div class="component-score-value ${getComponentClass(account.closed_loop_score)}">${account.closed_loop_score || 0}%</div>
+                <div class="component-score-value ${getComponentClass(account.closed_loop_score)}">${roundPct(account.closed_loop_score)}%</div>
                 <div class="component-score-indicator" style="color: ${getScoreColorValue(account.closed_loop_score)};">
                   ${account.closed_loop_score >= 70 ? '✓ Strong' : account.closed_loop_score >= 50 ? '~ Fair' : '✗ Needs Work'}
                 </div>
               </div>
               <div class="component-progress-bar">
-                <div class="component-progress-fill ${getComponentClass(account.closed_loop_score)}" style="width: ${account.closed_loop_score || 0}%;"></div>
+                <div class="component-progress-fill ${getComponentClass(account.closed_loop_score)}" style="width: ${roundPct(account.closed_loop_score)}%;"></div>
               </div>
               <div class="component-factors">
                 <div class="component-factor">
@@ -2831,19 +2831,19 @@
                 <div class="component-card-weight">30% weight</div>
               </div>
               <div class="component-score-row">
-                <div class="component-score-value ${getComponentClass(account.clarity_score)}">${account.clarity_score || 0}%</div>
+                <div class="component-score-value ${getComponentClass(account.clarity_score)}">${roundPct(account.clarity_score)}%</div>
                 <div class="component-score-indicator" style="color: ${getScoreColorValue(account.clarity_score)};">
                   ${account.clarity_score >= 70 ? '✓ Strong' : account.clarity_score >= 50 ? '~ Fair' : '✗ Needs Work'}
                 </div>
               </div>
               <div class="component-progress-bar">
-                <div class="component-progress-fill ${getComponentClass(account.clarity_score)}" style="width: ${account.clarity_score || 0}%;"></div>
+                <div class="component-progress-fill ${getComponentClass(account.clarity_score)}" style="width: ${roundPct(account.clarity_score)}%;"></div>
               </div>
               <div class="component-factors">
                 <div class="component-factor">
                   <div class="factor-icon good">✓</div>
                   <span class="factor-text">Complete (Context+Action+Timing)</span>
-                  <span class="factor-value">${account.clarity_score || 0}%</span>
+                  <span class="factor-value">${roundPct(account.clarity_score)}%</span>
                 </div>
                 <div class="component-factor">
                   <div class="factor-icon ${(100 - (account.clarity_score || 0)) > 30 ? 'bad' : 'warn'}">~</div>
@@ -2873,13 +2873,13 @@
                 <div class="component-card-weight">30% weight</div>
               </div>
               <div class="component-score-row">
-                <div class="component-score-value ${getComponentClass(account.marking_score)}">${account.marking_score || 0}%</div>
+                <div class="component-score-value ${getComponentClass(account.marking_score)}">${roundPct(account.marking_score)}%</div>
                 <div class="component-score-indicator" style="color: ${getScoreColorValue(account.marking_score)};">
                   ${account.marking_score >= 70 ? '✓ Strong' : account.marking_score >= 50 ? '~ Fair' : '✗ Needs Work'}
                 </div>
               </div>
               <div class="component-progress-bar">
-                <div class="component-progress-fill ${getComponentClass(account.marking_score)}" style="width: ${account.marking_score || 0}%;"></div>
+                <div class="component-progress-fill ${getComponentClass(account.marking_score)}" style="width: ${roundPct(account.marking_score)}%;"></div>
               </div>
               <div class="component-factors">
                 <div class="component-factor">
@@ -2983,7 +2983,7 @@
           <div class="issue-item">
             <div class="issue-icon-box yellow">✍️</div>
             <div class="issue-text">
-              <div class="issue-main">Low Instruction Quality (${account.clarity_score}%)</div>
+              <div class="issue-main">Low Instruction Quality (${roundPct(account.clarity_score)}%)</div>
               <div class="issue-sub">Coach reps on providing context + action + timing</div>
             </div>
           </div>
@@ -3061,10 +3061,10 @@
                       </div>
                     </td>
                     <td style="text-align: center;">
-                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.closed_loop_pct)};">${rep.closed_loop_pct || 0}%</div>
+                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.closed_loop_pct)};">${roundPct(rep.closed_loop_pct)}%</div>
                     </td>
                     <td style="text-align: center;">
-                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.clarity_pct)};">${rep.clarity_pct || 0}%</div>
+                      <div style="font-size: 16px; font-weight: 700; color: ${getScoreColorValue(rep.clarity_pct)};">${roundPct(rep.clarity_pct)}%</div>
                     </td>
                     <td style="text-align: center;">
                       ${markingRate !== null ? `
@@ -3110,21 +3110,21 @@
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${pipeline.reply_rate || 0}%</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${roundPct(pipeline.reply_rate)}%</div>
                 <div class="funnel-stat-label">Response Rate</div>
                 <div class="funnel-stat-detail">
                   <span style="color: var(--gray-text);">${pipeline.total_responses || 0} responded</span>
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}%</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${roundPct(pipeline.booking_rate)}%</div>
                 <div class="funnel-stat-label">Appointment Rate</div>
                 <div class="funnel-stat-detail">
                   <span style="color: var(--gray-text);">${pipeline.appointments_booked || 0} booked</span>
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${roundPct(pipeline.show_rate)}%</div>
                 <div class="funnel-stat-label">Show Rate</div>
                 <div class="funnel-stat-detail">
                   <span style="color: var(--gray-text);">${pipeline.showed || 0} showed</span>
@@ -3177,8 +3177,10 @@
         </div>
         ` : ''}
 
-        <!-- Lead Source Leaderboard -->
-        ${sources && sources.length > 0 ? `
+        <!-- Lead Source Leaderboard (Internet Only) -->
+        ${(() => {
+          const internetSources = filterInternetSources(sources);
+          return internetSources && internetSources.length > 0 ? `
         <div class="section-card">
           <div class="section-card-header">
             <div class="section-card-title">
@@ -3198,20 +3200,21 @@
                 </tr>
               </thead>
               <tbody>
-                ${sources.slice(0, 8).map(src => `
+                ${internetSources.slice(0, 8).map(src => `
                   <tr>
                     <td class="rep-name">${src.lead_source || 'Unknown'}</td>
                     <td>${src.total_leads || 0}</td>
-                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${src.reply_rate || 0}%</td>
-                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${src.booking_rate || 0}%</td>
-                    <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate || '-'}</td>
+                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${roundPct(src.reply_rate)}%</td>
+                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${roundPct(src.booking_rate)}%</td>
+                    <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate != null ? roundPct(src.show_rate) + '%' : '-'}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
           </div>
         </div>
-        ` : ''}
+        ` : '';
+        })()}
 
         <!-- Instruction Log -->
         ${instructionLog && instructionLog.length > 0 ? `
@@ -3467,7 +3470,7 @@
           <div class="search-result-item" onclick="selectClient('${account.location_id}')">
             <div class="search-result-dot risk-dot ${getRiskClass(account.risk_level)}"></div>
             <span class="search-result-name">${account.dealership_name}</span>
-            <span class="search-result-meta">Health: ${account.adoption_score || 0}</span>
+            <span class="search-result-meta">Health: ${roundPct(account.adoption_score)}</span>
           </div>
         `).join('');
       }
@@ -3680,15 +3683,32 @@
     }
 
     // Calculate internet leads (exclude walk-in, phone-up, drive-by, etc.)
+    // Non-internet sources to exclude
+    const nonInternetSources = ['walk-in', 'walk in', 'walkin', 'phone-up', 'phone up', 'phoneup', 'phone', 'drive-by', 'drive by', 'driveby', 'showroom', 'lot', 'referral'];
+
+    // Check if a source is internet-based
+    function isInternetSource(leadSource) {
+      const src = (leadSource || '').toLowerCase();
+      return !nonInternetSources.some(ni => src.includes(ni));
+    }
+
+    // Filter sources to only internet leads
+    function filterInternetSources(sources) {
+      if (!sources || !sources.length) return [];
+      return sources.filter(s => isInternetSource(s.lead_source));
+    }
+
+    // Calculate internet leads (exclude walk-in, phone-up, drive-by, etc.)
     function calculateInternetLeads(sources) {
       if (!sources || !sources.length) return 0;
-      const nonInternetSources = ['walk-in', 'walk in', 'walkin', 'phone-up', 'phone up', 'phoneup', 'phone', 'drive-by', 'drive by', 'driveby', 'showroom', 'lot', 'referral'];
-      return sources
-        .filter(s => {
-          const src = (s.lead_source || '').toLowerCase();
-          return !nonInternetSources.some(ni => src.includes(ni));
-        })
+      return filterInternetSources(sources)
         .reduce((sum, s) => sum + (s.total_leads || 0), 0);
+    }
+
+    // Round percentage for display (handles floating point precision)
+    function roundPct(value) {
+      if (value === null || value === undefined) return 0;
+      return Math.round(value);
     }
 
     // Get rep performance badge
