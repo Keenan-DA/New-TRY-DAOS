@@ -2449,7 +2449,7 @@
     async function loadClientDetail(locationId) {
       showLoading(true);
       hideError();
-      
+
       try {
         const results = await Promise.allSettled([
           fetchFromSupabase('v_cs_account_health', { filter: `location_id=eq.${locationId}` }),
@@ -2457,7 +2457,8 @@
           fetchFromSupabase('v_pipeline_funnel', { filter: `location_id=eq.${locationId}` }),
           fetchFromSupabase('v_rep_complete_scorecard', { filter: `location_id=eq.${locationId}`, order: 'closed_loop_pct.desc.nullslast' }),
           fetchFromSupabase('v_instruction_log', { filter: `location_id=eq.${locationId}`, order: 'reactivated_at.desc', limit: 25 }),
-          fetchFromSupabase('v_pipeline_funnel_by_source', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' })
+          fetchFromSupabase('v_pipeline_funnel_by_source', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' }),
+          fetchFromSupabase('v_rep_appointment_breakdown', { filter: `location_id=eq.${locationId}` })
         ]);
 
         const accountData = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -2466,13 +2467,30 @@
         const repData = results[3].status === 'fulfilled' ? results[3].value : [];
         const instructionLogData = results[4].status === 'fulfilled' ? results[4].value : [];
         const sourceData = results[5].status === 'fulfilled' ? results[5].value : [];
+        const repApptData = results[6].status === 'fulfilled' ? results[6].value : [];
+
+        // Merge appointment breakdown data into rep data
+        const repApptMap = {};
+        repApptData.forEach(ra => {
+          repApptMap[ra.assigned_rep_id] = ra;
+        });
+
+        const mergedRepData = repData.map(rep => {
+          const apptData = repApptMap[rep.rep_id] || repApptMap[rep.assigned_rep_id] || {};
+          return {
+            ...rep,
+            past_appointments: apptData.past_appointments || 0,
+            unmarked_appointments: apptData.unmarked_appointments || 0,
+            marking_rate: apptData.marking_rate || null
+          };
+        });
 
         selectedAccount = accountData[0];
         currentInstructionLog = instructionLogData;
         currentActionFilter = 'all';
         currentRepFilter = 'all';
         currentLogSort = 'newest';
-        
+
         // Extract unique reps from instruction log
         const repNames = new Set();
         instructionLogData.forEach(log => {
@@ -2480,7 +2498,7 @@
           if (repName) repNames.add(repName);
         });
         currentReps = Array.from(repNames).sort();
-        
+
         if (!selectedAccount) {
           throw new Error('Client not found');
         }
@@ -2489,7 +2507,7 @@
           account: selectedAccount,
           lostOpp: lostOppData[0],
           pipeline: pipelineData[0],
-          reps: repData,
+          reps: mergedRepData,
           instructionLog: instructionLogData,
           sources: sourceData
         });
