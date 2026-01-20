@@ -2470,13 +2470,19 @@
         const repApptData = results[6].status === 'fulfilled' ? results[6].value : [];
 
         // Merge appointment breakdown data into rep data
-        const repApptMap = {};
+        const repApptMapById = {};
+        const repApptMapByName = {};
         repApptData.forEach(ra => {
-          repApptMap[ra.assigned_rep_id] = ra;
+          if (ra.assigned_rep_id) repApptMapById[ra.assigned_rep_id] = ra;
+          if (ra.rep_name) repApptMapByName[ra.rep_name.toLowerCase()] = ra;
         });
 
         const mergedRepData = repData.map(rep => {
-          const apptData = repApptMap[rep.rep_id] || repApptMap[rep.assigned_rep_id] || {};
+          // Try to match by ID first, then by name
+          const apptData = repApptMapById[rep.rep_id] ||
+                           repApptMapById[rep.assigned_rep_id] ||
+                           (rep.rep_name ? repApptMapByName[rep.rep_name.toLowerCase()] : null) ||
+                           {};
           return {
             ...rep,
             past_appointments: apptData.past_appointments || 0,
@@ -2842,7 +2848,7 @@
                 <div class="component-factor">
                   <div class="factor-icon ${(100 - (account.clarity_score || 0)) > 30 ? 'bad' : 'warn'}">~</div>
                   <span class="factor-text">Partial / Incomplete</span>
-                  <span class="factor-value">${100 - (account.clarity_score || 0)}%</span>
+                  <span class="factor-value">${Math.round(100 - (account.clarity_score || 0))}%</span>
                 </div>
               </div>
               ${estLostFromInstructions > 0 ? `
@@ -2998,7 +3004,6 @@
         </div>
 
         <!-- Rep Leaderboard -->
-        ${reps && reps.length > 0 ? `
         <div class="section-card">
           <div class="section-card-header">
             <div class="section-card-title">
@@ -3006,6 +3011,7 @@
               Rep Leaderboard
             </div>
           </div>
+          ${reps && reps.length > 0 ? `
           <div class="section-card-body" style="padding: 0; overflow-x: auto;">
             <table class="leaderboard-table">
               <thead>
@@ -3074,8 +3080,15 @@
               </tbody>
             </table>
           </div>
+          ` : `
+          <div class="section-card-body">
+            <div class="no-data">
+              <div class="no-data-icon">👥</div>
+              <div class="no-data-text">No rep data available for this location</div>
+            </div>
+          </div>
+          `}
         </div>
-        ` : ''}
 
         <!-- Pipeline Performance -->
         ${pipeline ? `
@@ -3097,25 +3110,24 @@
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: var(--white);">${pipeline.appointments_booked || 0}</div>
-                <div class="funnel-stat-label">Appointments</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.reply_rate)};">${pipeline.reply_rate || 0}%</div>
+                <div class="funnel-stat-label">Response Rate</div>
                 <div class="funnel-stat-detail">
-                  <span class="funnel-stat-pct" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}% of leads</span>
+                  <span style="color: var(--gray-text);">${pipeline.total_responses || 0} responded</span>
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: var(--green);">${pipeline.showed || 0}</div>
-                <div class="funnel-stat-label">Showed</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.booking_rate)};">${pipeline.booking_rate || 0}%</div>
+                <div class="funnel-stat-label">Appointment Rate</div>
                 <div class="funnel-stat-detail">
-                  <span class="funnel-stat-pct" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}% show rate</span>
-                  <span style="font-size: 9px; color: var(--gray-light);">on ${(pipeline.showed || 0) + (pipeline.no_shows || 0)} marked appts</span>
+                  <span style="color: var(--gray-text);">${pipeline.appointments_booked || 0} booked</span>
                 </div>
               </div>
               <div class="funnel-stat-card">
-                <div class="funnel-stat-value" style="color: var(--red);">${pipeline.no_shows || 0}</div>
-                <div class="funnel-stat-label">No-Shows</div>
+                <div class="funnel-stat-value" style="color: ${getScoreColorValue(pipeline.show_rate)};">${pipeline.show_rate || 0}%</div>
+                <div class="funnel-stat-label">Show Rate</div>
                 <div class="funnel-stat-detail">
-                  <span class="funnel-stat-pct">${pipeline.showed + pipeline.no_shows > 0 ? Math.round(100 * pipeline.no_shows / (pipeline.showed + pipeline.no_shows)) : 0}% no-show rate</span>
+                  <span style="color: var(--gray-text);">${pipeline.showed || 0} showed</span>
                 </div>
               </div>
             </div>
