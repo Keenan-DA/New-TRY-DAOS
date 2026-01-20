@@ -2175,7 +2175,7 @@
     // SUPABASE CONFIGURATION
     // ========================================
     const SUPABASE_URL = 'https://gamwimamcvgakcetdypm.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_1prVZrYhMgR-cvRLuiKnqw_bFet_YV1';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhbXdpbWFtY3ZnYWtjZXRkeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDM0NzAsImV4cCI6MjA4MjYxOTQ3MH0.CuhNBluIOX6bMukLuvnmtd6gCq1k8fTVAL-xRDcUbis';
 
     // ========================================
     // STATE
@@ -2204,6 +2204,7 @@
       const response = await fetch(url, {
         headers: {
           'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
           'Content-Type': 'application/json'
         }
       });
@@ -2248,7 +2249,7 @@
           fetchFromSupabase('v_pipeline_funnel', { filter: `location_id=eq.${locationId}` }),
           fetchFromSupabase('v_rep_complete_scorecard', { filter: `location_id=eq.${locationId}`, order: 'closed_loop_pct.desc.nullslast' }),
           fetchFromSupabase('v_instruction_log', { filter: `location_id=eq.${locationId}`, order: 'reactivated_at.desc', limit: 25 }),
-          fetchFromSupabase('v_pipeline_funnel_by_source', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' })
+          fetchFromSupabase('v_source_performance', { filter: `location_id=eq.${locationId}`, order: 'total_leads.desc.nullslast' })
         ]);
 
         const accountData = results[0].status === 'fulfilled' ? results[0].value : [];
@@ -2895,10 +2896,10 @@
               <tbody>
                 ${sources.slice(0, 8).map(src => `
                   <tr>
-                    <td class="rep-name">${src.lead_source || 'Unknown'}</td>
-                    <td>${src.total_leads || 0}</td>
-                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${src.reply_rate || 0}%</td>
-                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${src.booking_rate || 0}%</td>
+                    <td class="rep-name">${src.lead_source_normalized || src.lead_source || 'Unknown'}</td>
+                    <td>${src.total_leads || src.lead_count || 0}</td>
+                    <td style="color: ${getScoreColorValue(src.response_rate || src.reply_rate)};">${src.response_rate || src.reply_rate || 0}%</td>
+                    <td style="color: ${getScoreColorValue(src.appt_rate || src.booking_rate)};">${src.appt_rate || src.booking_rate || 0}%</td>
                     <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate || '-'}</td>
                   </tr>
                 `).join('')}

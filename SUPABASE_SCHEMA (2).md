@@ -50,10 +50,11 @@ Drive AI is an automotive dealership AI assistant that:
 
 ```
 URL: https://gamwimamcvgakcetdypm.supabase.co
-API Key: sb_publishable_1prVZrYhMgR-cvRLuiKnqw_bFet_YV1
+API Key (anon): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdhbXdpbWFtY3ZnYWtjZXRkeXBtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwNDM0NzAsImV4cCI6MjA4MjYxOTQ3MH0.CuhNBluIOX6bMukLuvnmtd6gCq1k8fTVAL-xRDcUbis
 
 Headers for REST API:
   apikey: [API_KEY]
+  Authorization: Bearer [API_KEY]
   Content-Type: application/json
 ```
 
