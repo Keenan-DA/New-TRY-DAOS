@@ -738,105 +738,59 @@ closed_loop_pct = completed_tasks / (completed_tasks + overdue_tasks) × 100
 
 **SQL View Definition:**
 
+**View Dependencies:**
+```
+v_instruction_clarity (base)
+    └── v_instruction_log (depends on v_instruction_clarity)
+```
+> ⚠️ **IMPORTANT:** When modifying `v_instruction_clarity`, you must DROP `v_instruction_log` first, then recreate both views in order.
+
+**SQL View Definition:**
+
 ```sql
+-- ============================================================
+-- v_instruction_clarity v7.1.1
+-- IMPORTANT: Drop v_instruction_log first before modifying!
+-- ============================================================
+
+DROP VIEW IF EXISTS v_instruction_log;
+DROP VIEW IF EXISTS v_instruction_clarity;
+
 CREATE OR REPLACE VIEW v_instruction_clarity AS
 WITH instruction_analysis AS (
   SELECT
     r.id,
-    r.contact_id,
     r.location_id,
+    r.dealership_name,
+    r.contact_id,
+    r.lead_name,
+    r.assigned_rep_id,
     r.rep_name,
     r.instruction,
-    r.created_at,
-    r.reactivated_at,
     r.action,
+    r.follow_up_message,
+    r.follow_up_date,
+    r.appointment_type,
+    r.appointment_time,
+    r.reactivated_at,
+    r.created_at,
 
     -- CONTEXT DETECTION (Expanded patterns v7.1.1)
     CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN FALSE
     WHEN LOWER(r.instruction) ~*
-      -- Previous contact patterns
-      'follow.?up|following.?up|reached.?out|reaching.?out|called|texted|txted|emailed|' ||
-      'spoke|spoke with|spoke to|talked to|talked with|left message|left voicemail|left vm|' ||
-      'no answer|didn.?t answer|didnt answer|hung up|unresponsive|waiting for|waiting on|' ||
-      'sent message|sent text|sent email|return call|returned|' ||
-      -- Visit/relationship patterns
-      'was in|came in|come in|came by|stopped by|been in|showed up|no.?show|didn.?t show|' ||
-      'didnt show|cancel+ed|rescheduled|has appointment|made appointment|set appointment|' ||
-      'appointment with|coming in|coming by|coming back|come back|been here|visited|last visit|' ||
-      'signed|four square|' ||
-      -- Interest/intent patterns
-      'interested|showed interest|looking at|looking for|inquired|inquiry|put in a lead|' ||
-      'submitted|wants to|wanted to|asking about|asked about|checking on|serious about|' ||
-      'motivated|hesitant|concerned|no interest|not in market|not in the market|too far apart|' ||
-      -- Sales context patterns
-      'asked|wanted|trade|vehicle|car|truck|suv|motorcycle|bike|harley|pricing|price|quote|' ||
-      'offer|deal|sold|bought|test drive|test rode|demo|credit|approved|financing|co.?sign|' ||
-      'down payment|monthly|payment|inventory|stock|budget|range|lease|loan|purchase|' ||
-      'promo|promos|promotion|private party|settlement|under \$|under \d+k|itin|' ||
-      -- Status patterns
-      'ready|hot|warm|cold|question|issue|problem|help|needs|' ||
-      -- Dealership terms
-      'hog|lite touch|light touch|' ||
-      -- Vehicle models
-      'fat boy|road glide|street glide|sportster|low rider|breakout|cvo|dyna|softail|touring|' ||
-      'iron 883|forty.?eight|nightster|pan america|livewire|freewheeler|tri glide|ultra|' ||
-      'wide glide|heritage|deluxe|slim|bob|standard|custom'
+      'follow.?up|following.?up|reached.?out|reaching.?out|called|texted|txted|emailed|spoke|spoke with|spoke to|talked to|talked with|left message|left voicemail|left vm|no answer|didn.?t answer|didnt answer|hung up|unresponsive|waiting for|waiting on|sent message|sent text|sent email|return call|returned|was in|came in|come in|came by|stopped by|been in|showed up|no.?show|didn.?t show|didnt show|cancel+ed|rescheduled|has appointment|made appointment|set appointment|appointment with|coming in|coming by|coming back|come back|been here|visited|last visit|signed|four square|interested|showed interest|looking at|looking for|inquired|inquiry|put in a lead|submitted|wants to|wanted to|asking about|asked about|checking on|serious about|motivated|hesitant|concerned|no interest|not in market|not in the market|too far apart|asked|wanted|trade|vehicle|car|truck|suv|motorcycle|bike|harley|pricing|price|quote|offer|deal|sold|bought|test drive|test rode|demo|credit|approved|financing|co.?sign|down payment|monthly|payment|inventory|stock|budget|range|lease|loan|purchase|promo|promos|promotion|private party|settlement|under \$|under \d+k|itin|ready|hot|warm|cold|question|issue|problem|help|needs|hog|lite touch|light touch|fat boy|road glide|street glide|sportster|low rider|breakout|cvo|dyna|softail|touring|iron 883|forty.?eight|nightster|pan america|livewire|freewheeler|tri glide|ultra|wide glide|heritage|deluxe|slim|bob|standard|custom'
     THEN TRUE ELSE FALSE END AS has_context,
 
-    -- ACTION DETECTION (Expanded patterns v7.1.1 - MOST IMPORTANT)
+    -- ACTION DETECTION (Expanded patterns v7.1.1 - MOST IMPORTANT: 50% weight)
     CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN FALSE
     WHEN LOWER(r.instruction) ~*
-      -- Communication patterns
-      'call|text|txt|texted|txted|texting|dm|message|messaging|email|emailed|emailing|' ||
-      'reach|reach out|reaching out|contact|follow|follow up|following up|send|sent|' ||
-      -- Engagement patterns
-      'see if|find out|try to|ask|ask them|ask him|ask her|let know|let them know|' ||
-      'let him know|let her know|tell|tell them|tell him|tell her|make aware|remind|' ||
-      'check|check in|check back|confirm|confirmed|verify|' ||
-      -- Scheduling patterns
-      'book|set up|set an|arrange|schedule|reschedule|get back|respond|reply|' ||
-      'get them in|get him in|get her in|bring in|bring them in|' ||
-      'have come|have them come|have him come|have her come|invite|' ||
-      -- Persistence patterns
-      'touch base|circle back|ping|nudge|push|keep trying|stay engaged|be relentless|' ||
-      'aggressively|friendly nudge|' ||
-      -- Sales action patterns
-      'offer|present|show|demo|walk through|explain|discuss|talk|speak|meet|visit|' ||
-      'overcome|get in|come in|swing by|stop by|appraise|appraised|evaluate|' ||
-      -- Control patterns
-      'stop|don.?t|do not|cease|continue|keep|update|inform|notify|engage|' ||
-      'shut down|take over|marked|mark as'
+      'call|text|txt|texted|txted|texting|dm|message|messaging|email|emailed|emailing|reach|reach out|reaching out|contact|follow|follow up|following up|send|sent|see if|find out|try to|ask|ask them|ask him|ask her|let know|let them know|let him know|let her know|tell|tell them|tell him|tell her|make aware|remind|check|check in|check back|confirm|confirmed|verify|book|set up|set an|arrange|schedule|reschedule|get back|respond|reply|get them in|get him in|get her in|bring in|bring them in|have come|have them come|have him come|have her come|invite|touch base|circle back|ping|nudge|push|keep trying|stay engaged|be relentless|aggressively|friendly nudge|offer|present|show|demo|walk through|explain|discuss|talk|speak|meet|visit|overcome|get in|come in|swing by|stop by|appraise|appraised|evaluate|stop|don.?t|do not|cease|continue|keep|update|inform|notify|engage|shut down|take over|marked|mark as'
     THEN TRUE ELSE FALSE END AS has_action,
 
     -- TIMING DETECTION (Expanded patterns v7.1.1)
     CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN FALSE
     WHEN LOWER(r.instruction) ~*
-      -- Immediate patterns
-      '\bnow\b|right now|today|tonight|this morning|this afternoon|this evening|later today|' ||
-      'immediately|asap|right away|' ||
-      -- Relative days patterns
-      'tomorrow|yesterday|day after|next day|in a day|in \d+ day|couple days|few days|several days|' ||
-      -- Relative weeks patterns
-      'this week|next week|in a week|in \d+ week|couple weeks|few weeks|' ||
-      -- Relative past patterns
-      'a week ago|week ago|a month ago|month ago|months ago|couple months|few months|' ||
-      'a couple of months|couple of months|' ||
-      -- Day name patterns
-      'monday|tuesday|wednesday|thursday|friday|saturday|sunday|' ||
-      -- Time patterns
-      '\d+\s*am|\d+\s*pm|\d+:\d+|at \d+|around \d+|by \d+|' ||
-      -- Frequency patterns
-      'every day|every \d+|every other|starting tomorrow|starting monday|starting tuesday|' ||
-      'starting wednesday|starting thursday|starting friday|starting saturday|starting sunday|' ||
-      -- End point patterns
-      'end of day|end of week|eod|eow|first thing|' ||
-      -- Season patterns
-      'in the spring|in the summer|in the fall|in the winter|this spring|this summer|this fall|this winter|' ||
-      -- Conditional patterns
-      'until instructed|for now|at this time|' ||
-      -- General patterns
-      'morning|afternoon|evening|night|week|month|later|soon|hours|days|within|' ||
-      'when available|when ready|in two|in three|in four|in five|in 2|in 3|in 4|in 5'
+      '\bnow\b|right now|today|tonight|this morning|this afternoon|this evening|later today|immediately|asap|right away|tomorrow|yesterday|day after|next day|in a day|in \d+ day|couple days|few days|several days|this week|next week|in a week|in \d+ week|couple weeks|few weeks|a week ago|week ago|a month ago|month ago|months ago|couple months|few months|a couple of months|couple of months|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d+\s*am|\d+\s*pm|\d+:\d+|at \d+|around \d+|by \d+|every day|every \d+|every other|starting tomorrow|starting monday|starting tuesday|starting wednesday|starting thursday|starting friday|starting saturday|starting sunday|end of day|end of week|eod|eow|first thing|in the spring|in the summer|in the fall|in the winter|this spring|this summer|this fall|this winter|until instructed|for now|at this time|morning|afternoon|evening|night|week|month|later|soon|hours|days|within|when available|when ready|in two|in three|in four|in five|in 2|in 3|in 4|in 5'
     THEN TRUE ELSE FALSE END AS has_timing
 
   FROM reactivations r
@@ -844,33 +798,45 @@ WITH instruction_analysis AS (
 )
 SELECT
   ia.*,
-
-  -- WEIGHTED SCORE CALCULATION
-  -- Action = 50%, Context = 25%, Timing = 25%
+  -- WEIGHTED SCORE: Action=50%, Context=25%, Timing=25%
   (
     CASE WHEN ia.has_action THEN 50 ELSE 0 END +
     CASE WHEN ia.has_context THEN 25 ELSE 0 END +
     CASE WHEN ia.has_timing THEN 25 ELSE 0 END
   ) AS weighted_score,
-
   -- CLARITY LEVEL based on weighted score
   CASE
     WHEN ia.instruction IS NULL OR TRIM(ia.instruction) = '' THEN 'empty'
-    WHEN (
-      CASE WHEN ia.has_action THEN 50 ELSE 0 END +
-      CASE WHEN ia.has_context THEN 25 ELSE 0 END +
-      CASE WHEN ia.has_timing THEN 25 ELSE 0 END
-    ) >= 75 THEN 'complete'
-    WHEN (
-      CASE WHEN ia.has_action THEN 50 ELSE 0 END +
-      CASE WHEN ia.has_context THEN 25 ELSE 0 END +
-      CASE WHEN ia.has_timing THEN 25 ELSE 0 END
-    ) >= 50 THEN 'partial'
+    WHEN (CASE WHEN ia.has_action THEN 50 ELSE 0 END + CASE WHEN ia.has_context THEN 25 ELSE 0 END + CASE WHEN ia.has_timing THEN 25 ELSE 0 END) >= 75 THEN 'complete'
+    WHEN (CASE WHEN ia.has_action THEN 50 ELSE 0 END + CASE WHEN ia.has_context THEN 25 ELSE 0 END + CASE WHEN ia.has_timing THEN 25 ELSE 0 END) >= 50 THEN 'partial'
     ELSE 'incomplete'
   END AS clarity_level
-
 FROM instruction_analysis ia;
 ```
+
+**Output Columns:**
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | uuid | Reactivation ID |
+| `location_id` | text | Dealership identifier |
+| `dealership_name` | text | Dealership name |
+| `contact_id` | text | Lead contact ID |
+| `lead_name` | text | Lead's full name |
+| `assigned_rep_id` | text | Rep who submitted |
+| `rep_name` | text | Rep's name |
+| `instruction` | text | Cleaned instruction text |
+| `action` | text | AI decision (follow_up, appointment, remove) |
+| `follow_up_message` | text | AI-generated follow-up message |
+| `follow_up_date` | timestamptz | Scheduled follow-up date |
+| `appointment_type` | text | Type of appointment |
+| `appointment_time` | timestamptz | Appointment datetime |
+| `reactivated_at` | timestamptz | When rep submitted |
+| `created_at` | timestamptz | Record creation time |
+| `has_context` | boolean | Context patterns detected |
+| `has_action` | boolean | Action patterns detected |
+| `has_timing` | boolean | Timing patterns detected |
+| `weighted_score` | integer | 0-100 weighted score |
+| `clarity_level` | text | complete/partial/incomplete/empty |
 
 ---
 
@@ -898,6 +864,8 @@ FROM instruction_analysis ia;
 #### v_instruction_log
 **Purpose:** Full instruction log with AI outcomes for the Instruction Log tab.
 
+**Depends On:** `v_instruction_clarity` (must exist first)
+
 **Includes:**
 - Rep instruction
 - AI action (`follow_up`, `appointment`, `remove`)
@@ -905,6 +873,51 @@ FROM instruction_analysis ia;
 - Appointment details (if appointment)
 - Clarity scoring
 - Display-formatted labels
+
+**SQL View Definition:**
+```sql
+CREATE OR REPLACE VIEW v_instruction_log AS
+SELECT
+  id,
+  location_id,
+  dealership_name,
+  contact_id,
+  lead_name,
+  assigned_rep_id,
+  rep_name,
+  instruction,
+  action,
+  clarity_level,
+  has_context,
+  has_action,
+  has_timing,
+  follow_up_message,
+  follow_up_date,
+  appointment_type,
+  appointment_time,
+  reactivated_at,
+  CASE action
+    WHEN 'follow_up' THEN 'Follow-up'
+    WHEN 'appointment' THEN 'Appointment'
+    WHEN 'remove' THEN 'Remove'
+    ELSE action
+  END AS action_display,
+  CASE clarity_level
+    WHEN 'complete' THEN 'Complete'
+    WHEN 'partial' THEN 'Partial'
+    WHEN 'incomplete' THEN 'Incomplete'
+    WHEN 'empty' THEN 'Empty'
+    ELSE clarity_level
+  END AS clarity_display
+FROM v_instruction_clarity;
+```
+
+**Output Columns:**
+| Column | Description |
+|--------|-------------|
+| All columns from `v_instruction_clarity` | See above |
+| `action_display` | Human-readable action label |
+| `clarity_display` | Human-readable clarity label |
 
 ---
 
