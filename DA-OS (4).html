@@ -2401,6 +2401,16 @@
     let currentReps = [];
 
     // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+
+    // Round percentage for display (handles floating point precision)
+    function roundPct(value) {
+      if (value === null || value === undefined) return 0;
+      return Math.round(value);
+    }
+
+    // ========================================
     // API FUNCTIONS
     // ========================================
     async function fetchFromSupabase(viewName, options = {}) {
@@ -3179,8 +3189,13 @@
 
         <!-- Lead Source Leaderboard (Internet Only) -->
         ${(() => {
-          const internetSources = filterInternetSources(sources);
-          return internetSources && internetSources.length > 0 ? `
+          const internetSources = sources ? sources.filter(s => {
+            const src = (s.lead_source || '').toLowerCase();
+            const excluded = ['walk-in', 'walk in', 'walkin', 'phone-up', 'phone up', 'phoneup', 'phone', 'drive-by', 'drive by', 'driveby', 'showroom', 'lot', 'referral'];
+            return !excluded.some(ex => src.includes(ex));
+          }) : [];
+          if (!internetSources.length) return '';
+          return `
         <div class="section-card">
           <div class="section-card-header">
             <div class="section-card-title">
@@ -3204,16 +3219,16 @@
                   <tr>
                     <td class="rep-name">${src.lead_source || 'Unknown'}</td>
                     <td>${src.total_leads || 0}</td>
-                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${roundPct(src.reply_rate)}%</td>
-                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${roundPct(src.booking_rate)}%</td>
-                    <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate != null ? roundPct(src.show_rate) + '%' : '-'}</td>
+                    <td style="color: ${getScoreColorValue(src.reply_rate)};">${Math.round(src.reply_rate || 0)}%</td>
+                    <td style="color: ${getScoreColorValue(src.booking_rate)};">${Math.round(src.booking_rate || 0)}%</td>
+                    <td style="color: ${getScoreColorValue(src.show_rate)};">${src.show_rate != null ? Math.round(src.show_rate) + '%' : '-'}</td>
                   </tr>
                 `).join('')}
               </tbody>
             </table>
           </div>
         </div>
-        ` : '';
+        `;
         })()}
 
         <!-- Instruction Log -->
@@ -3703,12 +3718,6 @@
       if (!sources || !sources.length) return 0;
       return filterInternetSources(sources)
         .reduce((sum, s) => sum + (s.total_leads || 0), 0);
-    }
-
-    // Round percentage for display (handles floating point precision)
-    function roundPct(value) {
-      if (value === null || value === undefined) return 0;
-      return Math.round(value);
     }
 
     // Get rep performance badge
