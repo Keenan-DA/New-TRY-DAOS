@@ -100,14 +100,18 @@ Ensure "now" and similar immediate timing words are properly detected:
 
 ```sql
 has_timing AS (
-  instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|now|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available|at \d|by \d|\d:\d|\d(am|pm|a\.m|p\.m))\y'
+  -- Split into two patterns OR'd together for reliability
+  instruction ~* '(^|[^a-z])now([^a-z]|$)'  -- Explicit "now" check
+  OR instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
+  OR instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)'
 )
 ```
 
 Key changes:
-- Added `\y` word boundary around "now" to ensure it matches as standalone word
-- Added "right now" explicitly
-- Ensured time patterns like "1pm", "2:30", "at 3" are captured
+- **Explicit standalone "now" check** using `(^|[^a-z])now([^a-z]|$)` - matches "now" not preceded/followed by letters
+- Separated time patterns into logical groups for reliability
+- "right now", "right away" in word-boundary group
+- Numeric time patterns (2:00pm, at 3, etc.) in separate group
 
 ---
 
@@ -142,8 +146,13 @@ SELECT
   END as has_action,
 
   -- TIME: When to do it (includes "now", "immediately", etc.)
+  -- Uses explicit "now" check plus word-boundary patterns for reliability
   CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN false
-       ELSE r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|now|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y|at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)'
+       ELSE (
+         r.instruction ~* '(^|[^a-z])now([^a-z]|$)'
+         OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
+         OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)'
+       )
   END as has_timing,
 
   -- Clarity level calculation
@@ -151,12 +160,12 @@ SELECT
     WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN 'empty'
     WHEN (r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y')
          AND (r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)')
-         AND (r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|now|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y|at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)')
+         AND (r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)')
     THEN 'complete'
     WHEN (
       (CASE WHEN r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y' THEN 1 ELSE 0 END) +
       (CASE WHEN r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)' THEN 1 ELSE 0 END) +
-      (CASE WHEN r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|now|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y|at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)' THEN 1 ELSE 0 END)
+      (CASE WHEN r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)' THEN 1 ELSE 0 END)
     ) >= 2
     THEN 'partial'
     ELSE 'incomplete'
@@ -209,3 +218,49 @@ WHERE r.instruction IS NOT NULL;
 - Single quotes in PostgreSQL SQL need to be escaped as `''`
 - The pattern `let .{1,20} know` allows 1-20 characters between "let" and "know" to match phrases like "let the customer know"
 - Past tense detection moves those words to CONTEXT where they belong
+
+---
+
+## Validation Testing (January 20, 2026)
+
+### Confirmed Issue: "now" alone NOT being detected
+
+Tested 21 additional examples. Confirmed pattern:
+
+| Instruction | TIME Rating | Expected |
+|-------------|------------|----------|
+| "engage **now** ask for cosigner" | ✗ TIME | **Should be ✓** |
+| "engage **now** ask for id and paystub" | ✗ TIME | **Should be ✓** |
+| "engage **now** in spanish, encourage them..." | ✗ TIME | **Should be ✓** |
+| "Engage **right now** - What are you looking for?" | ✓ TIME | Correct |
+| "engage **right away** ask for id" | ✓ TIME | Correct |
+| "Reach out at **2:00pm**" | ✓ TIME | Correct |
+
+**Root cause:** The word "now" alone is not matching despite being in the pattern. Likely a regex boundary issue.
+
+### Confirmed Working: CRM-only notes correctly get ✗ ACT
+
+| Instruction | ACT Rating | Correct? |
+|-------------|-----------|----------|
+| "I spoke to the customer he needs to have $5500 or a cosigner. No other way around it." | ✗ ACT | **YES** - pure note |
+| "Customer is interested in financing our Escalade - curious about how financing works makes good income but bad credit due to divorce" | ✗ ACT | **YES** - pure note |
+
+These are CRM-style situation descriptions without any directive for DAOS. The system correctly identifies them as missing ACTION.
+
+### Examples That Should Be COMPLETE After Fix
+
+| # | Instruction | Current | After Fix |
+|---|-------------|---------|-----------|
+| 1 | "engage now ask for cosigner" | ✓C ✓A ✗T (partial) | ✓C ✓A **✓T** (complete) |
+| 6 | "engage now ask for id and paystub" | ✗C ✓A ✗T (partial) | ✗C ✓A **✓T** (partial→same) |
+| 9 | "engage now in spanish, encourage them to provide phone..." | ✓C ✓A ✗T (partial) | ✓C ✓A **✓T** (complete) |
+| 13 | "engage now, encourage them to provide phone..." | ✓C ✓A ✗T (partial) | ✓C ✓A **✓T** (complete) |
+
+### Summary of Validation
+
+- **21 examples tested**
+- **4 had incorrect TIME ratings** (all due to "now" not matching)
+- **2 correctly identified as CRM-only notes** (no action)
+- **15 were correctly rated**
+
+The primary fix needed is ensuring "now" matches as a standalone word in the TIME pattern.
