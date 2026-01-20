@@ -109,8 +109,11 @@ instruction ~* '(^|[^a-z])now([^a-z]|$)'
 ## Complete Updated View SQL
 
 ```sql
--- Drop and recreate v_instruction_clarity with improved patterns
-CREATE OR REPLACE VIEW v_instruction_clarity AS
+-- First drop the existing view (required when column structure changes)
+DROP VIEW IF EXISTS v_instruction_clarity;
+
+-- Then create the new view with improved patterns
+CREATE VIEW v_instruction_clarity AS
 SELECT
   r.id,
   r.location_id,
