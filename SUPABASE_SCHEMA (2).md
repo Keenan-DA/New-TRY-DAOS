@@ -1,8 +1,8 @@
 # DRIVE AI 7.0 - Complete Supabase Database Documentation
 
-**Version:** 7.0.5  
-**Last Updated:** December 31, 2025  
-**Database Stats:** 7 Tables | 37 Views | 56 Functions | 6 Triggers | 67 Indexes
+**Version:** 7.0.6
+**Last Updated:** January 20, 2026
+**Database Stats:** 7 Tables | 35 Views | 2 Materialized Views | 56 Functions | 6 Triggers | 69 Indexes
 
 ---
 
@@ -875,8 +875,10 @@ closed_loop_pct = completed_tasks / (completed_tasks + overdue_tasks) × 100
 
 ### Health Score Views
 
-#### v_health_score ⭐ (Updated Dec 31, 2025)
+#### v_health_score ⭐ MATERIALIZED VIEW (Updated Jan 20, 2026)
 **Purpose:** Overall system health/adoption score per dealership.
+
+**Type:** MATERIALIZED VIEW (pre-computed for performance, requires periodic refresh)
 
 **Component Scores:**
 | Score | Weight | Calculation |
@@ -890,7 +892,13 @@ closed_loop_pct = completed_tasks / (completed_tasks + overdue_tasks) × 100
 Adoption Score = (closed_loop_score × 0.40) + (clarity_score × 0.30) + (marking_score × 0.30)
 ```
 
-**Loop Closure Formula (Updated Dec 31, 2025):**
+**Clarity Score Calculation (Fixed Jan 20, 2026):**
+```sql
+clarity_score = complete_instructions / non_empty_instructions × 100
+```
+> **Important:** Clarity is calculated by aggregating from `v_instruction_clarity` per location. Only non-empty instructions are counted in the denominator. This was fixed in v7.0.6 to properly pull from the instruction clarity view.
+
+**Loop Closure Formula:**
 ```
 closed_loop_score = completed_tasks / (completed_tasks + overdue_tasks) × 100
 ```
@@ -908,8 +916,12 @@ closed_loop_score = completed_tasks / (completed_tasks + overdue_tasks) × 100
 - `location_id`, `dealership_name`
 - `total_tasks`, `completed_tasks`, `overdue_tasks`, `closed_loop_score`
 - `total_instructions`, `complete_instructions`, `empty_instructions`, `clarity_score`
-- `unmarked_appointments`, `marking_score`
-- `adoption_score`, `health_status`
+- `past_appointments`, `marked_appointments`, `unmarked_appointments`, `marking_score`
+
+**Refresh Command:**
+```sql
+REFRESH MATERIALIZED VIEW v_health_score;
+```
 
 ---
 
@@ -1000,8 +1012,10 @@ closed_loop_score = completed_tasks / (completed_tasks + overdue_tasks) × 100
 
 ### CS Portfolio Management Views
 
-#### v_cs_account_health ⭐ (Updated Dec 31, 2025 - v7.0.5)
+#### v_cs_account_health ⭐ MATERIALIZED VIEW (Updated Jan 20, 2026 - v7.0.6)
 **Purpose:** Single view for CS managers to assess ALL accounts at a glance. Identifies at-risk accounts, shows trends, and provides actionable coaching recommendations.
+
+**Type:** MATERIALIZED VIEW (pre-computed for performance, requires periodic refresh)
 
 **Key Features:**
 - Portfolio-level risk assessment
@@ -1010,6 +1024,13 @@ closed_loop_score = completed_tasks / (completed_tasks + overdue_tasks) × 100
 - Automated primary issue identification
 - **Compounding Rate (North Star metric)**
 - Compounding proof metrics
+
+**Refresh Command:**
+```sql
+REFRESH MATERIALIZED VIEW v_health_score;
+REFRESH MATERIALIZED VIEW v_cs_account_health;
+```
+> **Note:** Must refresh `v_health_score` first as `v_cs_account_health` depends on it.
 
 **⭐ NORTH STAR METRIC:**
 | Column | Description |
@@ -1584,6 +1605,37 @@ GROUP BY l.id;
 | `v_rep_appointment_breakdown` | **Per-rep appointment marking and show rates** |
 | `v_lost_opportunity` | **Estimate lost appointments from adoption gaps** |
 
+### Materialized View Maintenance
+
+The following views are **MATERIALIZED VIEWS** that must be refreshed to show current data:
+
+| View | Depends On | Refresh Order |
+|------|------------|---------------|
+| `v_health_score` | Base tables | 1st |
+| `v_cs_account_health` | `v_health_score` | 2nd |
+
+**Manual Refresh:**
+```sql
+REFRESH MATERIALIZED VIEW v_health_score;
+REFRESH MATERIALIZED VIEW v_cs_account_health;
+```
+
+**Automated Refresh (recommended):**
+```sql
+-- Enable pg_cron extension
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Schedule hourly refresh
+SELECT cron.schedule('refresh-health-views', '0 * * * *', $$
+  REFRESH MATERIALIZED VIEW v_health_score;
+  REFRESH MATERIALIZED VIEW v_cs_account_health;
+$$);
+```
+
+> **Why Materialized?** The health score calculations involve multiple table scans and aggregations. Regular views were timing out (>30s). Materialized views pre-compute and cache the results for instant queries (<100ms).
+
+---
+
 ### Critical Business Rules
 
 1. **Tasks can ONLY be completed via reactivation** - No other way to close a task
@@ -1599,6 +1651,22 @@ GROUP BY l.id;
 ---
 
 ## Changelog
+
+### v7.0.6 (January 20, 2026)
+- **CRITICAL FIX:** `clarity_score` was not properly aggregating from `v_instruction_clarity`
+  - Before fix: avg clarity_score ~6.8% (incorrect)
+  - After fix: avg clarity_score ~58-71% (correct)
+- **Converted to MATERIALIZED VIEWS:** `v_health_score` and `v_cs_account_health` are now materialized views for performance
+  - Regular views were timing out on dashboard queries
+  - Materialized views pre-compute data for instant queries
+- **Added Indexes:** `idx_health_score_location` and `idx_cs_account_health_location` for fast lookups
+- **Refresh Required:** Views must be refreshed periodically to show current data:
+  ```sql
+  REFRESH MATERIALIZED VIEW v_health_score;
+  REFRESH MATERIALIZED VIEW v_cs_account_health;
+  ```
+- **Recommended:** Set up hourly cron job to auto-refresh views
+- **35 views + 2 materialized views** - CS Dashboard performance optimized
 
 ### v7.0.5 (December 31, 2025)
 - **Added Column:** `compounding_rate` to `v_cs_account_health` - **NORTH STAR METRIC**
@@ -1635,5 +1703,5 @@ GROUP BY l.id;
 
 ---
 
-*Document last updated: December 31, 2025*
-*Verified: 7 Tables | 37 Views | 56 Functions | 6 Triggers | 67 Indexes*
+*Document last updated: January 20, 2026*
+*Verified: 7 Tables | 35 Views | 2 Materialized Views | 56 Functions | 6 Triggers | 69 Indexes*
