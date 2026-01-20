@@ -100,10 +100,10 @@ Ensure "now" and similar immediate timing words are properly detected:
 
 ```sql
 has_timing AS (
-  -- Split into two patterns OR'd together for reliability
+  -- Split into patterns OR'd together for reliability
   instruction ~* '(^|[^a-z])now([^a-z]|$)'  -- Explicit "now" check
-  OR instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
-  OR instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)'
+  OR instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|noon|midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
+  OR instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)|at noon|at midnight'
 )
 ```
 
@@ -136,13 +136,13 @@ SELECT
 
   -- CONTEXT: Includes past-tense descriptive words (what happened)
   CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN false
-       ELSE r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y'
+       ELSE r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|rescheduled|rebooked|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|attempted|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|timed out|put in a lead|submitted|received|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|sorry|application|approval|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|kawasaki|yamaha|suzuki|bmw|ducati|indian|polaris|can-am|ktm|triumph|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america|ninja|zx|atv|utv|side by side|motorcycle|bike)\y'
   END as has_context,
 
   -- ACTION: Only imperative/directive phrases (what DAOS should do)
   -- Excludes past-tense (called, tried, spoke, etc.) - those are CONTEXT
   CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN false
-       ELSE r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)'
+       ELSE r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reschedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check in|check with|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|start outreach|begin outreach|start engagement|begin engagement|stop|pause|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)'
   END as has_action,
 
   -- TIME: When to do it (includes "now", "immediately", etc.)
@@ -150,22 +150,22 @@ SELECT
   CASE WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN false
        ELSE (
          r.instruction ~* '(^|[^a-z])now([^a-z]|$)'
-         OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
-         OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)'
+         OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|noon|midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y'
+         OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)|at noon|at midnight'
        )
   END as has_timing,
 
   -- Clarity level calculation
   CASE
     WHEN r.instruction IS NULL OR TRIM(r.instruction) = '' THEN 'empty'
-    WHEN (r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y')
-         AND (r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)')
-         AND (r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)')
+    WHEN (r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|rescheduled|rebooked|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|attempted|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|timed out|put in a lead|submitted|received|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|sorry|application|approval|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|kawasaki|yamaha|suzuki|bmw|ducati|indian|polaris|can-am|ktm|triumph|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america|ninja|zx|atv|utv|side by side|motorcycle|bike)\y')
+         AND (r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reschedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check in|check with|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|start outreach|begin outreach|start engagement|begin engagement|stop|pause|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)')
+         AND (r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|noon|midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)|at noon|at midnight')
     THEN 'complete'
     WHEN (
-      (CASE WHEN r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|put in a lead|submitted|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america)\y' THEN 1 ELSE 0 END) +
-      (CASE WHEN r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|stop|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)' THEN 1 ELSE 0 END) +
-      (CASE WHEN r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)' THEN 1 ELSE 0 END)
+      (CASE WHEN r.instruction ~* '\y(asked|wanted|interested|looking|trade|vehicle|car|truck|suv|pricing|price|quote|offer|deal|sold|bought|test drive|voicemail|no answer|left message|spoke|mentioned|said|told|visit|come in|stop by|credit|approved|financing|co-sign|cosign|down payment|monthly|payment|inventory|stock|appointment|scheduled|rescheduled|rebooked|waiting|ready|hot|warm|cold|serious|motivated|hesitant|concerned|question|issue|problem|help|needs|wants|budget|range|lease|loan|purchase|called|tried|attempted|reached|texted|emailed|contacted|hung up|didnt answer|didn''t answer|not answering|unresponsive|timed out|put in a lead|submitted|received|inquired|came in|stopped by|visited|walked in|phoned|left vm|lvm|no response|sorry|application|approval|honda|toyota|ford|chevy|chevrolet|ram|jeep|dodge|harley|kawasaki|yamaha|suzuki|bmw|ducati|indian|polaris|can-am|ktm|triumph|fat boy|dyna|sportster|softail|touring|street glide|road glide|wide glide|breakout|iron|forty-eight|48|883|1200|v-rod|night rod|muscle|slim|deluxe|heritage|low rider|fat bob|road king|electra glide|ultra|cvo|trike|freewheeler|livewire|nightster|pan america|ninja|zx|atv|utv|side by side|motorcycle|bike)\y' THEN 1 ELSE 0 END) +
+      (CASE WHEN r.instruction ~* '(^|[^a-z])(call|text|follow up|follow-up|followup|send|schedule|reschedule|reach out|contact|see if|find out|try to|ask|let .{1,20} know|make .{1,20} aware|remind|check in|check with|confirm|book|set up|setup|arrange|get back to|respond|reply|message|email|notify|engage|start outreach|begin outreach|start engagement|begin engagement|stop|pause|don''t|do not|cease|continue|keep|update|inform|touch base|circle back|ping|nudge|push|offer|present|show|demo|walk through|explain|discuss|talk to|speak to|speak with|meet|invite|bring .{1,15} in|get .{1,15} in|have .{1,15} come|work toward|work towards)([^a-z]|$)' THEN 1 ELSE 0 END) +
+      (CASE WHEN r.instruction ~* '(^|[^a-z])now([^a-z]|$)' OR r.instruction ~* '\y(today|tomorrow|morning|afternoon|evening|tonight|noon|midnight|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|next|later|soon|asap|a\.s\.a\.p|immediately|right away|right now|hours|days|end of|first thing|eod|eow|this week|next week|couple|few|within|when available)\y' OR r.instruction ~* 'at \d|\d:\d|\d\s?(am|pm|a\.m|p\.m)|at noon|at midnight' THEN 1 ELSE 0 END)
     ) >= 2
     THEN 'partial'
     ELSE 'incomplete'
@@ -264,3 +264,68 @@ These are CRM-style situation descriptions without any directive for DAOS. The s
 - **15 were correctly rated**
 
 The primary fix needed is ensuring "now" matches as a standalone word in the TIME pattern.
+
+---
+
+## Validation Testing Round 2 (January 20, 2026)
+
+### Additional Issue Found: "at noon" NOT being detected
+
+**Example:** "Taking video and sending it. **At noon** check in and make sure he got videos..."
+- **Got:** ✗ TIME
+- **Expected:** ✓ TIME
+
+The pattern `at \d` only matches "at" followed by a digit. Need to add "noon" and "midnight".
+
+### Additional Issue Found: "Let [name] know" NOT matching ACTION
+
+**Example:** "**Let Elsa know** that we are sorry but we are not able to get that many Monkeys in..."
+- **Got:** ✗ ACT
+- **Expected:** ✓ ACT
+
+Current pattern `let know` doesn't have flexible matching. Fix uses `let .{1,20} know`.
+
+**Note:** Some instructions like "let Oscar know" get ✓ ACT because they contain other action words (e.g., "engagement" contains "engage").
+
+### Updated Patterns Based on Round 2
+
+**Add to TIME pattern:**
+- `noon` and `midnight` as explicit time references
+
+**Add to CONTEXT pattern:**
+- `timed out` (call failures)
+- `attempted` (past tense attempt)
+- `sorry` (apology context)
+- `received` (past tense)
+- `rebooked` (past tense)
+- `rescheduled` (past tense - note: "reschedule" is action, "rescheduled" is context)
+
+**Add to ACTION pattern:**
+- `start outreach` / `begin outreach`
+- `reschedule` (imperative - different from past tense "rescheduled")
+- `check in` (as directive)
+- `confirm with`
+- `pause` (as in "pause engagement")
+
+### Summary: All Issues Identified
+
+| Issue | Pattern | Fix |
+|-------|---------|-----|
+| "now" not matching | TIME | Explicit `(^|[^a-z])now([^a-z]|$)` check |
+| "at noon" not matching | TIME | Add `noon`, `midnight` to word list |
+| "let Elsa know" not matching | ACTION | Use `let .{1,20} know` flexible match |
+| "tried to call" not context | CONTEXT | Add `tried`, `attempted`, `timed out` |
+| Past-tense treated as action | ACTION | Exclude `called`, `spoke`, `reached`, etc. |
+
+### Test Coverage
+
+**Total examples analyzed:** 46+
+**Issues found:** 8 pattern gaps
+**Correctly rated:** ~85%
+
+The fixes address all identified gaps while maintaining correct detection of:
+- CRM-only notes (✗ ACT) ✓
+- "right now" / "right away" (✓ TIME) ✓
+- "immediately" (✓ TIME) ✓
+- Specific times like "2:30pm" (✓ TIME) ✓
+
