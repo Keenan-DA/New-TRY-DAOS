@@ -2337,6 +2337,15 @@
         const accountsWithData = accounts.filter(hasAnyData);
         const emptyAccounts = accounts.filter(a => !hasAnyData(a));
         console.log(`📊 Loaded ${accounts.length} accounts: ${accountsWithData.length} with data, ${emptyAccounts.length} empty`);
+
+        // Debug: Show first 3 "empty" accounts to see their actual values
+        if (emptyAccounts.length > 0) {
+          console.log('🔍 Sample "empty" accounts (should be filtered):');
+          emptyAccounts.slice(0, 3).forEach(a => {
+            console.log(`  ${a.dealership_name}: total_tasks=${a.total_tasks}, completed_tasks=${a.completed_tasks}, adoption_score=${a.adoption_score}, compounding_rate=${a.compounding_rate}`);
+          });
+        }
+
         logDebug('Account Summary', {
           total: accounts.length,
           withData: accountsWithData.length,
@@ -2376,10 +2385,13 @@
 
     function toggleActiveFilter() {
       showActiveOnly = !showActiveOnly;
+      console.log(`🔄 Toggle filter: showActiveOnly=${showActiveOnly}`);
       if (showActiveOnly) {
         filteredAccounts = accounts.filter(accountHasData);
+        console.log(`🔍 Filtered: ${filteredAccounts.length} of ${accounts.length} accounts have data`);
       } else {
         filteredAccounts = [...accounts];
+        console.log(`📋 Showing all ${filteredAccounts.length} accounts`);
       }
       updateActiveFilterToggle();
       sortAccounts();
