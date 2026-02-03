@@ -2329,9 +2329,11 @@
         accounts = await fetchFromSupabase('v_cs_account_health');
 
         // Log summary stats
-        // Check for accounts with any data vs completely empty
-        const hasAnyData = (a) => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 0 ||
-                                  (a.reactivations_last_30 || 0) > 0 || (a.appointments_last_30 || 0) > 0;
+        // Check for accounts with any data vs completely empty (uses actual view fields)
+        const hasAnyData = (a) => (a.total_tasks || 0) > 0 ||
+                                  (a.completed_tasks || 0) > 0 ||
+                                  (a.adoption_score || 0) > 0 ||
+                                  (a.compounding_rate || 0) > 0;
         const accountsWithData = accounts.filter(hasAnyData);
         const emptyAccounts = accounts.filter(a => !hasAnyData(a));
         console.log(`📊 Loaded ${accounts.length} accounts: ${accountsWithData.length} with data, ${emptyAccounts.length} empty`);
@@ -2364,9 +2366,12 @@
     }
 
     // Helper function to check if account has any data
+    // Uses actual fields from v_cs_account_health view
     function accountHasData(a) {
-      return (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 0 ||
-             (a.reactivations_last_30 || 0) > 0 || (a.appointments_last_30 || 0) > 0;
+      return (a.total_tasks || 0) > 0 ||
+             (a.completed_tasks || 0) > 0 ||
+             (a.adoption_score || 0) > 0 ||
+             (a.compounding_rate || 0) > 0;
     }
 
     function toggleActiveFilter() {
