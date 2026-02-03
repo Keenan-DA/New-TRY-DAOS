@@ -2102,14 +2102,18 @@
       <!-- Account List -->
       <div class="account-list-header">
         <div class="section-title" style="margin-bottom: 0;">All Clients</div>
-        <select class="sort-dropdown" id="sortDropdown" onchange="sortAccounts()">
-          <option value="compounding_asc">Sort: Compounding Rate (Low→High)</option>
-          <option value="compounding_desc">Sort: Compounding Rate (High→Low)</option>
-          <option value="health_asc">Sort: Health Score (Low→High)</option>
-          <option value="health_desc">Sort: Health Score (High→Low)</option>
-          <option value="name">Sort: Name (A-Z)</option>
-          <option value="overdue">Sort: Overdue Tasks</option>
-        </select>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button id="activeFilterBtn" class="filter-btn active" onclick="toggleActiveFilter()" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--green); background: rgba(0,255,136,0.1); color: var(--green); cursor: pointer; font-size: 12px;">✓ Active Only</button>
+          <button onclick="toggleDebug()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--gray-text); background: transparent; color: var(--gray-text); cursor: pointer; font-size: 11px;" title="Toggle Debug Panel (Ctrl+Shift+D)">🐛</button>
+          <select class="sort-dropdown" id="sortDropdown" onchange="sortAccounts()">
+            <option value="compounding_asc">Sort: Compounding Rate (Low→High)</option>
+            <option value="compounding_desc">Sort: Compounding Rate (High→Low)</option>
+            <option value="health_asc">Sort: Health Score (Low→High)</option>
+            <option value="health_desc">Sort: Health Score (High→Low)</option>
+            <option value="name">Sort: Name (A-Z)</option>
+            <option value="overdue">Sort: Overdue Tasks</option>
+          </select>
+        </div>
       </div>
 
       <div class="account-list" id="accountList"></div>
@@ -2124,6 +2128,19 @@
       <div id="clientDetailContent"></div>
     </div>
   </main>
+
+  <!-- Debug Panel (toggle with Ctrl+Shift+D or bug button) -->
+  <div id="debugPanel" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 300px; background: #0a0a0a; border-top: 2px solid var(--green); z-index: 10000; overflow: hidden;">
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: #111; border-bottom: 1px solid #333;">
+      <div style="font-weight: bold; color: var(--green);">🐛 Debug Panel</div>
+      <div style="display: flex; gap: 10px;">
+        <button onclick="document.getElementById('debugLog').innerHTML=''" style="padding: 4px 12px; background: #333; border: none; color: white; border-radius: 4px; cursor: pointer;">Clear</button>
+        <button onclick="testSupabaseConnection()" style="padding: 4px 12px; background: var(--green); border: none; color: black; border-radius: 4px; cursor: pointer;">Test Connection</button>
+        <button onclick="toggleDebug()" style="padding: 4px 12px; background: #ff4444; border: none; color: white; border-radius: 4px; cursor: pointer;">Close</button>
+      </div>
+    </div>
+    <div id="debugLog" style="padding: 12px; height: calc(100% - 50px); overflow-y: auto; font-family: monospace; font-size: 12px; color: #ccc;"></div>
+  </div>
 
   <!-- Info Modal -->
   <div class="modal-overlay" id="infoModal">
@@ -2190,16 +2207,51 @@
     let currentLogSort = 'newest';
     let currentInstructionLog = [];
     let currentReps = [];
+    let showActiveOnly = true; // Default to showing only active accounts
+    let debugMode = false; // Toggle with Ctrl+Shift+D
+
+    // ========================================
+    // DEBUG FUNCTIONS
+    // ========================================
+    function toggleDebug() {
+      debugMode = !debugMode;
+      const debugPanel = document.getElementById('debugPanel');
+      if (debugPanel) {
+        debugPanel.style.display = debugMode ? 'block' : 'none';
+      }
+      console.log('Debug mode:', debugMode ? 'ON' : 'OFF');
+    }
+
+    function logDebug(label, data) {
+      if (debugMode) {
+        console.log(`[DEBUG] ${label}:`, data);
+        const debugLog = document.getElementById('debugLog');
+        if (debugLog) {
+          const entry = document.createElement('div');
+          entry.innerHTML = `<strong>${new Date().toLocaleTimeString()} - ${label}:</strong><pre style="max-height:200px;overflow:auto;background:#1a1a1a;padding:8px;border-radius:4px;font-size:11px;">${JSON.stringify(data, null, 2)}</pre>`;
+          debugLog.prepend(entry);
+        }
+      }
+    }
+
+    // Keyboard shortcut for debug mode
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        toggleDebug();
+      }
+    });
 
     // ========================================
     // API FUNCTIONS
     // ========================================
     async function fetchFromSupabase(viewName, options = {}) {
       let url = `${SUPABASE_URL}/rest/v1/${viewName}?select=*`;
-      
+
       if (options.filter) url += `&${options.filter}`;
       if (options.order) url += `&order=${options.order}`;
       if (options.limit) url += `&limit=${options.limit}`;
+
+      logDebug(`Fetching ${viewName}`, { url, options });
 
       const response = await fetch(url, {
         headers: {
@@ -2210,10 +2262,13 @@
 
       if (!response.ok) {
         const errorText = await response.text();
+        logDebug(`ERROR ${viewName}`, { status: response.status, error: errorText });
         throw new Error(`${viewName}: ${response.status} - ${errorText}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      logDebug(`Response ${viewName}`, { count: data.length, sample: data.slice(0, 2) });
+      return data;
     }
 
     // ========================================
@@ -2225,15 +2280,55 @@
 
       try {
         accounts = await fetchFromSupabase('v_cs_account_health');
-        filteredAccounts = [...accounts];
+
+        // Log summary stats
+        const activeAccounts = accounts.filter(a => (a.total_tasks || 0) > 0);
+        const inactiveAccounts = accounts.filter(a => (a.total_tasks || 0) === 0);
+        console.log(`📊 Loaded ${accounts.length} accounts: ${activeAccounts.length} active, ${inactiveAccounts.length} inactive`);
+        logDebug('Account Summary', {
+          total: accounts.length,
+          active: activeAccounts.length,
+          inactive: inactiveAccounts.length,
+          topAccounts: accounts.filter(a => a.adoption_score > 50).slice(0, 5).map(a => ({ name: a.dealership_name, score: a.adoption_score }))
+        });
+
+        // Apply active filter if enabled
+        if (showActiveOnly) {
+          filteredAccounts = accounts.filter(a => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 10);
+          console.log(`🔍 Filtered to ${filteredAccounts.length} active accounts`);
+        } else {
+          filteredAccounts = [...accounts];
+        }
+
         updatePortfolioStats();
         sortAccounts();
         updateLastUpdated();
+        updateActiveFilterButton();
         showLoading(false);
       } catch (error) {
         console.error('Error loading dashboard:', error);
+        logDebug('Load Error', { message: error.message, stack: error.stack });
         showError(error.message);
         showLoading(false);
+      }
+    }
+
+    function toggleActiveFilter() {
+      showActiveOnly = !showActiveOnly;
+      if (showActiveOnly) {
+        filteredAccounts = accounts.filter(a => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 10);
+      } else {
+        filteredAccounts = [...accounts];
+      }
+      updateActiveFilterButton();
+      sortAccounts();
+    }
+
+    function updateActiveFilterButton() {
+      const btn = document.getElementById('activeFilterBtn');
+      if (btn) {
+        btn.textContent = showActiveOnly ? '✓ Active Only' : 'Show All';
+        btn.className = showActiveOnly ? 'filter-btn active' : 'filter-btn';
       }
     }
 
@@ -3409,9 +3504,47 @@
     });
 
     // ========================================
+    // DEBUG TEST FUNCTION
+    // ========================================
+    async function testSupabaseConnection() {
+      const debugLog = document.getElementById('debugLog');
+      debugLog.innerHTML = '<div style="color: var(--green);">Testing Supabase connection...</div>';
+
+      try {
+        // Test 1: Basic connection
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/v_cs_account_health?select=dealership_name,adoption_score,total_tasks&limit=5`, {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+        }
+
+        const data = await response.json();
+        debugLog.innerHTML += `<div style="color: var(--green);">✓ Connection successful! Received ${data.length} accounts</div>`;
+        debugLog.innerHTML += `<div style="margin-top: 10px;"><strong>Sample Data:</strong></div>`;
+        debugLog.innerHTML += `<pre style="background:#1a1a1a;padding:10px;border-radius:4px;overflow:auto;max-height:150px;">${JSON.stringify(data, null, 2)}</pre>`;
+
+        // Summary
+        const activeCount = data.filter(a => (a.total_tasks || 0) > 0).length;
+        debugLog.innerHTML += `<div style="margin-top: 10px; color: yellow;">📊 In this sample: ${activeCount}/${data.length} have tasks</div>`;
+
+      } catch (error) {
+        debugLog.innerHTML += `<div style="color: red;">✗ Connection failed: ${error.message}</div>`;
+        console.error('Supabase test failed:', error);
+      }
+    }
+
+    // ========================================
     // INITIALIZATION
     // ========================================
     document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚀 Dashboard initializing...');
+      console.log('📡 Supabase URL:', SUPABASE_URL);
+      console.log('🔑 API Key:', SUPABASE_KEY.substring(0, 20) + '...');
       loadDashboardData();
     });
   </script>
