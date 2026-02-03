@@ -616,6 +616,49 @@
       cursor: pointer;
     }
 
+    /* Toggle Switch */
+    .toggle-switch {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .toggle-switch input { display: none; }
+    .toggle-slider {
+      width: 36px;
+      height: 20px;
+      background: var(--gray-dark);
+      border-radius: 10px;
+      position: relative;
+      transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: var(--gray-mid);
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: all 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider {
+      background: var(--green);
+    }
+    .toggle-switch input:checked + .toggle-slider::before {
+      transform: translateX(16px);
+      background: white;
+    }
+    .toggle-label {
+      font-size: 11px;
+      color: var(--gray-text);
+    }
+    .toggle-switch input:checked ~ .toggle-label {
+      color: var(--green);
+    }
+
     .account-list { display: flex; flex-direction: column; gap: 10px; }
 
     .account-card {
@@ -2040,11 +2083,11 @@
           <div class="north-star-breakdown">
             <div class="breakdown-item">
               <div class="breakdown-count active" id="activeCount">--</div>
-              <div class="breakdown-label">⚡ ACTIVE (≥100%)</div>
+              <div class="breakdown-label">⚡ COMPOUNDING (≥100%)</div>
             </div>
             <div class="breakdown-item">
               <div class="breakdown-count inactive" id="inactiveCount">--</div>
-              <div class="breakdown-label">○ INACTIVE (&lt;100%)</div>
+              <div class="breakdown-label">↗ BUILDING (&lt;100%)</div>
             </div>
           </div>
         </div>
@@ -2103,7 +2146,11 @@
       <div class="account-list-header">
         <div class="section-title" style="margin-bottom: 0;">All Clients</div>
         <div style="display: flex; gap: 10px; align-items: center;">
-          <button id="activeFilterBtn" class="filter-btn active" onclick="toggleActiveFilter()" style="padding: 8px 16px; border-radius: 6px; border: 1px solid var(--green); background: rgba(0,255,136,0.1); color: var(--green); cursor: pointer; font-size: 12px;">✓ Active Only</button>
+          <label class="toggle-switch" title="Hide accounts with no data">
+            <input type="checkbox" id="activeFilterToggle" checked onchange="toggleActiveFilter()">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">Hide Empty</span>
+          </label>
           <button onclick="toggleDebug()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--gray-text); background: transparent; color: var(--gray-text); cursor: pointer; font-size: 11px;" title="Toggle Debug Panel (Ctrl+Shift+D)">🐛</button>
           <select class="sort-dropdown" id="sortDropdown" onchange="sortAccounts()">
             <option value="compounding_asc">Sort: Compounding Rate (Low→High)</option>
@@ -2282,20 +2329,23 @@
         accounts = await fetchFromSupabase('v_cs_account_health');
 
         // Log summary stats
-        const activeAccounts = accounts.filter(a => (a.total_tasks || 0) > 0);
-        const inactiveAccounts = accounts.filter(a => (a.total_tasks || 0) === 0);
-        console.log(`📊 Loaded ${accounts.length} accounts: ${activeAccounts.length} active, ${inactiveAccounts.length} inactive`);
+        // Check for accounts with any data vs completely empty
+        const hasAnyData = (a) => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 0 ||
+                                  (a.reactivations_last_30 || 0) > 0 || (a.appointments_last_30 || 0) > 0;
+        const accountsWithData = accounts.filter(hasAnyData);
+        const emptyAccounts = accounts.filter(a => !hasAnyData(a));
+        console.log(`📊 Loaded ${accounts.length} accounts: ${accountsWithData.length} with data, ${emptyAccounts.length} empty`);
         logDebug('Account Summary', {
           total: accounts.length,
-          active: activeAccounts.length,
-          inactive: inactiveAccounts.length,
+          withData: accountsWithData.length,
+          empty: emptyAccounts.length,
           topAccounts: accounts.filter(a => a.adoption_score > 50).slice(0, 5).map(a => ({ name: a.dealership_name, score: a.adoption_score }))
         });
 
-        // Apply active filter if enabled
+        // Apply active filter if enabled - hide accounts with ALL zeros
         if (showActiveOnly) {
-          filteredAccounts = accounts.filter(a => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 10);
-          console.log(`🔍 Filtered to ${filteredAccounts.length} active accounts`);
+          filteredAccounts = accounts.filter(hasAnyData);
+          console.log(`🔍 Filtered to ${filteredAccounts.length} accounts with data`);
         } else {
           filteredAccounts = [...accounts];
         }
@@ -2303,7 +2353,7 @@
         updatePortfolioStats();
         sortAccounts();
         updateLastUpdated();
-        updateActiveFilterButton();
+        updateActiveFilterToggle();
         showLoading(false);
       } catch (error) {
         console.error('Error loading dashboard:', error);
@@ -2313,22 +2363,27 @@
       }
     }
 
+    // Helper function to check if account has any data
+    function accountHasData(a) {
+      return (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 0 ||
+             (a.reactivations_last_30 || 0) > 0 || (a.appointments_last_30 || 0) > 0;
+    }
+
     function toggleActiveFilter() {
       showActiveOnly = !showActiveOnly;
       if (showActiveOnly) {
-        filteredAccounts = accounts.filter(a => (a.total_tasks || 0) > 0 || (a.total_leads || 0) > 10);
+        filteredAccounts = accounts.filter(accountHasData);
       } else {
         filteredAccounts = [...accounts];
       }
-      updateActiveFilterButton();
+      updateActiveFilterToggle();
       sortAccounts();
     }
 
-    function updateActiveFilterButton() {
-      const btn = document.getElementById('activeFilterBtn');
-      if (btn) {
-        btn.textContent = showActiveOnly ? '✓ Active Only' : 'Show All';
-        btn.className = showActiveOnly ? 'filter-btn active' : 'filter-btn';
+    function updateActiveFilterToggle() {
+      const toggle = document.getElementById('activeFilterToggle');
+      if (toggle) {
+        toggle.checked = showActiveOnly;
       }
     }
 
@@ -2425,11 +2480,15 @@
       if (avgRate >= 100) {
         northStarCard.className = 'north-star-card active';
         portfolioStatus.className = 'north-star-status active';
-        portfolioStatus.innerHTML = '<span class="status-icon">⚡</span><span>PORTFOLIO COMPOUNDING ACTIVE</span>';
+        portfolioStatus.innerHTML = '<span class="status-icon">⚡</span><span>PORTFOLIO COMPOUNDING</span>';
+      } else if (avgRate >= 50) {
+        northStarCard.className = 'north-star-card close';
+        portfolioStatus.className = 'north-star-status close';
+        portfolioStatus.innerHTML = '<span class="status-icon">↗</span><span>PORTFOLIO BUILDING</span>';
       } else {
-        northStarCard.className = 'north-star-card inactive';
-        portfolioStatus.className = 'north-star-status inactive';
-        portfolioStatus.innerHTML = `<span class="status-icon">○</span><span>PORTFOLIO INACTIVE</span>`;
+        northStarCard.className = 'north-star-card low';
+        portfolioStatus.className = 'north-star-status low';
+        portfolioStatus.innerHTML = `<span class="status-icon">○</span><span>PORTFOLIO STALLED</span>`;
       }
 
       // Health Score
@@ -2496,7 +2555,7 @@
 
       container.innerHTML = filteredAccounts.map(account => {
         const rate = parseFloat(account.compounding_rate || 0);
-        const isActive = rate >= 100;
+        const compStatus = getCompoundingStatus(rate);
         const riskClass = getRiskClass(account.risk_level);
         const healthClass = getHealthClass(account.adoption_score);
         const trendClass = getTrendClass(account.health_trend);
@@ -2515,12 +2574,12 @@
               </div>
             </div>
             <div class="account-metrics">
-              <div class="compounding-mini ${isActive ? 'active' : 'inactive'}">
-                <span>${isActive ? '⚡' : '○'}</span>
-                <span>⭐ Compounding: ${Math.round(rate)}%</span>
-                <span>${isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+              <div class="compounding-mini ${compStatus.class}">
+                <span>${compStatus.icon}</span>
+                <span>⭐Compounding: ${Math.round(rate)}%</span>
+                <span style="color: ${compStatus.color}">${compStatus.text}</span>
               </div>
-              ${!isActive ? `
+              ${rate < 100 ? `
                 <div class="progress-bar-mini">
                   <div class="fill" style="width: ${Math.min(rate, 100)}%;"></div>
                 </div>
@@ -2576,17 +2635,17 @@
     function renderClientDetail({ account, lostOpp, pipeline, reps, instructionLog, sources }) {
       const container = document.getElementById('clientDetailContent');
       const rate = parseFloat(account.compounding_rate || 0);
-      const isActive = rate >= 100;
+      const compStatus = getCompoundingStatus(rate);
       const riskClass = getRiskClass(account.risk_level);
       const healthClass = getHealthClass(account.adoption_score);
       const adoptionClass = getAdoptionClass(account.adoption_score);
-      
+
       // Threshold rating logic for compounding
       let thresholdClass, thresholdRating, rateColorClass;
       if (rate >= 150) { thresholdClass = 'excellent'; thresholdRating = 'EXCELLENT'; rateColorClass = 'active'; }
       else if (rate >= 100) { thresholdClass = 'good'; thresholdRating = 'GOOD'; rateColorClass = 'active'; }
-      else if (rate >= 80) { thresholdClass = 'close'; thresholdRating = 'CLOSE'; rateColorClass = 'close'; }
-      else { thresholdClass = 'low'; thresholdRating = 'LOW'; rateColorClass = 'low'; }
+      else if (rate >= 50) { thresholdClass = 'close'; thresholdRating = 'BUILDING'; rateColorClass = 'close'; }
+      else { thresholdClass = 'low'; thresholdRating = 'STALLED'; rateColorClass = 'low'; }
 
       // Count actions for filter chips
       const actionCounts = {
@@ -2777,7 +2836,7 @@
         </div>
 
         <!-- Compounding Rate (North Star) -->
-        <div class="compounding-card ${isActive ? 'active' : 'inactive'} ${rateColorClass}">
+        <div class="compounding-card ${compStatus.class} ${rateColorClass}">
           <div class="compounding-header">
             <div class="north-star-label">
               <span>⭐ COMPOUNDING RATE</span>
@@ -2791,18 +2850,20 @@
             </div>
             <div class="compounding-status-box ${rateColorClass}">
               <div class="compounding-status-title ${rateColorClass}">
-                <span>${isActive ? '⚡' : '○'}</span>
-                <span>COMPOUNDING ${isActive ? 'ACTIVE' : 'INACTIVE'}</span>
+                <span>${compStatus.icon}</span>
+                <span>${compStatus.text}</span>
               </div>
               <div class="compounding-status-desc">
-                ${isActive 
+                ${rate >= 100
                   ? `Pipeline has a +${Math.round(rate - 100)}% efficiency advantage. Adoption is driving growth.`
-                  : `Pipeline is ${Math.round(100 - rate)}% below activation. Improve adoption scores above to unlock compounding.`
+                  : rate >= 50
+                    ? `Pipeline is building momentum at ${Math.round(rate)}%. ${Math.round(100 - rate)}% more to reach compounding.`
+                    : `Pipeline is stalled at ${Math.round(rate)}%. Improve adoption scores above to unlock compounding.`
                 }
               </div>
             </div>
           </div>
-          ${!isActive ? `
+          ${rate < 100 ? `
           <div class="compounding-progress">
             <div class="compounding-progress-header">
               <span>Progress to activation</span>
@@ -3452,6 +3513,17 @@
       if (score >= 60) return 'var(--green)';
       if (score >= 40) return 'var(--yellow)';
       return 'var(--red)';
+    }
+
+    // Compounding status helper - returns { text, icon, class, color }
+    function getCompoundingStatus(rate) {
+      if (rate >= 100) {
+        return { text: 'COMPOUNDING', icon: '⚡', class: 'active', color: 'var(--green)' };
+      } else if (rate >= 50) {
+        return { text: 'BUILDING', icon: '↗', class: 'close', color: 'var(--yellow)' };
+      } else {
+        return { text: 'STALLED', icon: '○', class: 'low', color: 'var(--red)' };
+      }
     }
 
     function getRepStatusClass(status) {
